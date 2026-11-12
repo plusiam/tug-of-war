@@ -449,6 +449,14 @@ function openBoard() {
   renderConn();
   renderBoard();
 }
+// 카드·공감이 몰려 들어올 때: 도착 확인은 바로 보내고, 판 그리기와 저장은 모아서 한다.
+// (한 장마다 판 전체를 다시 그리면 인원이 많을 때 도착 확인이 몇 초씩 밀린다. 끌어 옮기는 중에는 그리기를 미룬다.)
+let drawTimer = null, saveTimer = null;
+function touchBoard() {
+  if (!drawTimer) drawTimer = setTimeout(function draw() { if (T.dragging) { drawTimer = setTimeout(draw, 250); return; } drawTimer = null; if (T.g) renderBoard(); }, 250);
+  if (!saveTimer) saveTimer = setTimeout(() => { saveTimer = null; saveGame(); }, 400);
+}
+window.addEventListener('pagehide', () => { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; saveGame(); } });
 function onCard(p, srv = 0) {
   if (!p.id || !p.text || !['L', 'R'].includes(p.side)) return;
   const s = Math.max(1, Math.min(5, parseInt(p.strength) || 3));
@@ -469,14 +477,14 @@ function onCard(p, srv = 0) {
       history: [{ side: p.side, strength: s, text, phase, t: Date.now() }] };
     T.g.cards.push(c);
   }
-  saveGame(); renderBoard(); ackTo(srv, p, c.rev); pushBoardSoon();
+  ackTo(srv, p, c.rev); touchBoard(); pushBoardSoon();
 }
 function onLike(p) {
   const c = T.g.cards.find(x => x.id === p.id); if (!c || !p.sid) return;
   c.likes = c.likes || [];
   const i = c.likes.indexOf(p.sid);
   if (p.on && i < 0) c.likes.push(p.sid); else if (!p.on && i >= 0) c.likes.splice(i, 1);
-  saveGame(); renderBoard(); pushBoardSoon();
+  touchBoard(); pushBoardSoon();
 }
 const colX = (side, s) => side === 'L' ? 50 - (s - 0.5) * 9.4 : 50 + (s - 0.5) * 9.4;
 const scaleLabel = s => s === 1 ? '1 살짝' : s === 3 ? '3 보통' : s === 5 ? '5 아주 세게' : String(s);
@@ -688,7 +696,7 @@ function updateSelbar() {
     const members = c.group ? T.g.cards.filter(x => x.group === c.group && !x.hidden) : [c];
     const cur = {};
     for (const m of members) { const me = board.querySelector(`.card[data-id="${m.id}"]`); if (me) { const r = me.getBoundingClientRect(); cur[m.id] = { x: (r.left + r.width / 2 - rect.left) / rect.width * 100, y: (r.top - rect.top) / rect.height * 100, el: me }; } }
-    d = { id: c.id, sx: e.clientX, sy: e.clientY, rect, members, cur, moved: false };
+    d = { id: c.id, sx: e.clientX, sy: e.clientY, rect, members, cur, moved: false }; T.dragging = true;
     el.setPointerCapture(e.pointerId);
   });
   board.addEventListener('pointermove', e => {
@@ -700,6 +708,7 @@ function updateSelbar() {
     for (const m of d.members) { const o = d.cur[m.id]; if (!o) continue; o.el.classList.add('drag'); o.el.style.left = (o.x + px) + '%'; o.el.style.top = (o.y + py) + '%'; }
   });
   const end = e => {
+    T.dragging = false;
     if (!d) return;
     if (d.moved) {
       for (const m of d.members) { const o = d.cur[m.id]; if (!o) continue; m.x = Math.max(2, Math.min(98, parseFloat(o.el.style.left))); m.y = Math.max(1, Math.min(96, parseFloat(o.el.style.top))); }
