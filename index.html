@@ -308,7 +308,7 @@ h2{font-size:20px;margin:0 0 12px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script>
 'use strict';
-/* 실시간 통신: Supabase Realtime Broadcast만 사용(테이블·저장 없음) */
+/* 실시간 통신: Supabase Realtime Broadcast만 사용(테이블·저장 없음). 구조는 아래 openChannel 위 설명 참고 */
 const SB_URL = 'https://rdasqovxocztrxrbdipy.supabase.co';
 const SB_KEY = 'sb_publishable_Tzp5ngFfktgYcWc0ISjVlQ_HB9yQg-1';
 const PALETTE = ['#7c3aed','#0d9488','#d97706','#db2777','#4b5563','#65a30d','#0284c7','#b91c1c'];
@@ -322,13 +322,27 @@ const LS = {
 };
 let sb = null;
 function client() { if (!sb) sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false }, realtime: { params: { eventsPerSecond: 30 } } }); return sb; }
-function openChannel(code, handlers, onStatus) {
-  const ch = client().channel('tug-of-war-' + code, { config: { broadcast: { self: false, ack: true } } });
+/* 통신 구조(v3): 학생은 보내기만 하고(HTTP), 학생 메시지는 교사 화면만 받는다. 인원이 늘어도 오가는 양이 인원에 비례해서만 는다.
+   - 교사 수신함 tow3-<코드>-in       : 교사 화면만 구독. 학생이 hello·card·like를 HTTP로 보낸다
+   - 전체 알림   tow3-<코드>-all      : 학생 모두 구독. 교사가 판 설정(config)을 보낸다(만약에·공유·질문 고치기 때만)
+   - 개인 알림   tow3-<코드>-s-<sid>  : 그 학생만 구독. 교사가 도착 확인(ack)과 처음 들어올 때의 판 설정을 보낸다 */
+const topicIn = code => 'tow3-' + code + '-in';
+const topicAll = code => 'tow3-' + code + '-all';
+const topicMe = (code, sid) => 'tow3-' + code + '-s-' + sid;
+const cleanSid = v => String(v || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+async function post(messages) { // 구독 없이 보내기(Realtime HTTP 방송)
+  try { const r = await fetch(SB_URL + '/realtime/v1/api/broadcast', { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ messages }) }); return r.ok; } catch { return false; }
+}
+// 교사 화면이 보내는 것(도착 확인 등)은 0.2초씩 모아 한 번에 보낸다
+const outQ = []; let outTimer = null;
+function sendTo(topic, event, payload) { outQ.push({ topic, event, payload }); if (!outTimer) outTimer = setTimeout(flushOut, 200); }
+async function flushOut() { outTimer = null; while (outQ.length) await post(outQ.splice(0, 40)); }
+function openChannel(topic, handlers, onStatus) {
+  const ch = client().channel(topic, { config: { broadcast: { self: false } } });
   for (const [ev, fn] of Object.entries(handlers)) ch.on('broadcast', { event: ev }, ({ payload }) => fn(payload || {}));
   ch.subscribe(st => onStatus && onStatus(st));
   return ch;
 }
-function send(ch, event, payload) { if (!ch) return Promise.resolve('no'); return ch.send({ type: 'broadcast', event, payload }).catch(() => 'error'); }
 function toast(msg, ms = 2200) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
 function show(id) { for (const s of document.querySelectorAll('body > section')) s.classList.toggle('hide', s.id !== id); }
 function studentUrl(code) { return location.origin + location.pathname + '?c=' + code; }
@@ -366,16 +380,20 @@ function cfgPayload() {
   return { question: g.question, left: g.left, right: g.right, whatif: g.whatif.at(-1) || null, share: g.share, stage: inputStage(),
     board: g.share ? g.cards.filter(c => !c.hidden).map(c => ({ id: c.id, text: c.text, side: c.side, strength: c.strength, stage: stageOf(c), likes: (c.likes || []).length })) : null };
 }
-let cfgTimer = null;
-function pushConfig() { clearTimeout(cfgTimer); cfgTimer = setTimeout(() => send(T.ch, 'config', cfgPayload()), 150); }
+let cfgTimer = null, boardTimer = null, boardLast = 0;
+function pushConfig() { clearTimeout(cfgTimer); cfgTimer = setTimeout(() => { if (!T.g) return; boardLast = Date.now(); sendTo(topicAll(T.g.code), 'config', cfgPayload()); }, 150); }
+// 친구 근거 공유 중 카드·공감이 들어올 때: 학생 화면의 친구 근거 목록은 4초에 한 번만 새로 보낸다(인원이 많아도 한도를 넘지 않게)
+function pushBoardSoon() { if (!T.g || !T.g.share || boardTimer) return; boardTimer = setTimeout(() => { boardTimer = null; pushConfig(); }, Math.max(300, 4000 - (Date.now() - boardLast))); }
+function ackTo(p, rev) { const sid = cleanSid(p.sid); if (sid && T.g) sendTo(topicMe(T.g.code, sid), 'ack', { id: p.id, rev }); }
 
 async function codeTaken(code) {
   return new Promise(resolve => {
-    let done = false;
-    const ch = openChannel(code, { config: () => { if (!done) { done = true; client().removeChannel(ch); resolve(true); } } }, st => {
-      if (st === 'SUBSCRIBED') send(ch, 'hello', { probe: true });
+    let done = false; const sid = 'probe' + uid();
+    const fin = v => { if (!done) { done = true; client().removeChannel(ch); resolve(v); } };
+    const ch = openChannel(topicMe(code, sid), { config: () => fin(true) }, st => {
+      if (st === 'SUBSCRIBED') post([{ topic: topicIn(code), event: 'hello', payload: { sid, probe: true } }]);
     });
-    setTimeout(() => { if (!done) { done = true; client().removeChannel(ch); resolve(false); } }, 1600);
+    setTimeout(() => fin(false), 2200);
   });
 }
 async function createGame(question, left, right) {
@@ -395,8 +413,8 @@ function openBoard() {
   show('board-view');
   document.title = '생각 줄다리기 · ' + T.g.code;
   if (T.ch) client().removeChannel(T.ch);
-  T.ch = openChannel(T.g.code, {
-    hello: () => pushConfig(),
+  T.ch = openChannel(topicIn(T.g.code), {
+    hello: p => { const sid = cleanSid(p.sid); if (sid && T.g) sendTo(topicMe(T.g.code, sid), 'config', cfgPayload()); },
     card: p => onCard(p),
     like: p => onLike(p),
   }, st => { T.connected = st === 'SUBSCRIBED'; $('#b-dot').classList.toggle('on', T.connected); if (T.connected) pushConfig(); });
@@ -410,7 +428,7 @@ function onCard(p) {
   const stage = Number.isInteger(p.stage) ? Math.max(0, Math.min(lastStage(), p.stage)) : phase;
   let c = T.g.cards.find(x => x.id === p.id);
   if (c) {
-    if (c.rev >= (p.rev || 0)) { send(T.ch, 'ack', { id: p.id, rev: c.rev }); return; }
+    if (c.rev >= (p.rev || 0)) { ackTo(p, c.rev); return; }
     const posChanged = c.side !== p.side || c.strength !== s;
     if (posChanged || c.text !== text) c.history.push({ side: p.side, strength: s, text, phase, t: Date.now() });
     Object.assign(c, { side: p.side, strength: s, text, name, rev: p.rev || 0 });
@@ -422,14 +440,14 @@ function onCard(p) {
       history: [{ side: p.side, strength: s, text, phase, t: Date.now() }] };
     T.g.cards.push(c);
   }
-  saveGame(); renderBoard(); send(T.ch, 'ack', { id: p.id, rev: c.rev }); if (T.g.share) pushConfig();
+  saveGame(); renderBoard(); ackTo(p, c.rev); pushBoardSoon();
 }
 function onLike(p) {
   const c = T.g.cards.find(x => x.id === p.id); if (!c || !p.sid) return;
   c.likes = c.likes || [];
   const i = c.likes.indexOf(p.sid);
   if (p.on && i < 0) c.likes.push(p.sid); else if (!p.on && i >= 0) c.likes.splice(i, 1);
-  saveGame(); renderBoard(); pushConfig();
+  saveGame(); renderBoard(); pushBoardSoon();
 }
 const colX = (side, s) => side === 'L' ? 50 - (s - 0.5) * 9.4 : 50 + (s - 0.5) * 9.4;
 const scaleLabel = s => s === 1 ? '1 살짝' : s === 3 ? '3 보통' : s === 5 ? '5 아주 세게' : String(s);
@@ -805,12 +823,14 @@ $('#s-clear').onclick = () => { T.sel.clear(); renderBoard(); };
 window.addEventListener('resize', () => { if (T.g && !$('#board-view').classList.contains('hide')) renderBoard(); });
 
 /* =================== 학생 =================== */
-const S = { code: '', me: null, cfg: null, ch: null, side: null, editing: null, from: null, pending: {}, connected: false };
+const S = { code: '', me: null, cfg: null, chs: [], joinId: null, side: null, editing: null, from: null, pending: {}, connected: false };
 // 학생 기록은 코드+이름별로 저장한다(한 기기에서 여러 학생이 들어가도 섞이지 않게). 탭마다 마지막 이름은 sessionStorage에.
 const meKey = (code, name) => 'tow:me:' + code + ':' + name;
 const nameKey = code => 'tow:name:' + code;
 function lastName(code) { let n = null; try { n = sessionStorage.getItem(nameKey(code)); } catch {} return n || LS.get(nameKey(code)) || LS.get('tow:me:' + code)?.name || ''; }
 function loadMe(code, name) { const old = LS.get('tow:me:' + code); return LS.get(meKey(code, name)) || (old && old.name === name ? old : null); }
+function leaveChannels() { for (const ch of S.chs || []) client().removeChannel(ch); S.chs = []; S.connected = false; }
+function toTeacher(event, payload) { return post([{ topic: topicIn(S.code), event, payload }]); }
 function saveMe() { LS.set(meKey(S.code, S.me.name), S.me); LS.set(nameKey(S.code), S.me.name); try { sessionStorage.setItem(nameKey(S.code), S.me.name); } catch {} }
 const stOf = c => c.stage || 0;
 function openJoin(code) {
@@ -832,19 +852,30 @@ function joinGame(code, name) {
   S.me.name = name; saveMe();
   history.replaceState(null, '', '?c=' + code);
   $('#j-msg').textContent = '선생님 화면을 찾는 중…'; $('#j-go').disabled = true;
-  if (S.ch) client().removeChannel(S.ch);
-  let found = false;
-  S.ch = openChannel(code, {
-    config: p => { found = true; S.cfg = p; LS.set('tow:cfg:' + code, p); if ($('#student-view').classList.contains('hide')) enterStudent(); else renderStudent(); },
-    ack: p => { const c = S.me.cards.find(x => x.id === p.id); if (c && (p.rev ?? 0) >= c.rev) { c.ok = true; saveMe(); delete S.pending[p.id]; renderMine(); } },
-  }, st => {
-    S.connected = st === 'SUBSCRIBED'; $('#s-dot').classList.toggle('on', S.connected);
-    if (S.connected) { send(S.ch, 'hello', {}); resendPending(); }
-  });
+  leaveChannels();
+  const joinId = S.joinId = uid(); let found = false, tries = 0;
+  const hello = () => toTeacher('hello', { sid: S.me.sid });
+  const onCfg = p => {
+    found = true; S.cfg = p; LS.set('tow:cfg:' + code, p);
+    if ($('#student-view').classList.contains('hide')) enterStudent(); else renderStudent();
+    resendStalled(); // 선생님 화면이 다시 연결되면 설정이 한 번 오므로, 그때 아직 도착 확인을 못 받은 근거를 다시 보낸다
+  };
+  S.chs = [
+    openChannel(topicAll(code), { config: onCfg }),
+    openChannel(topicMe(code, S.me.sid), {
+      config: onCfg,
+      ack: p => { const c = S.me.cards.find(x => x.id === p.id); if (c && (p.rev ?? 0) >= c.rev) { c.ok = true; saveMe(); delete S.pending[p.id]; renderMine(); } },
+    }, st => {
+      S.connected = st === 'SUBSCRIBED'; $('#s-dot').classList.toggle('on', S.connected);
+      if (S.connected) { hello(); resendPending(); }
+    }),
+  ];
+  // 선생님 화면의 답이 늦으면 몇 번 더 묻는다
+  const again = setInterval(() => { if (found || S.joinId !== joinId || ++tries > 3) return clearInterval(again); if (S.connected) hello(); }, 1500);
   setTimeout(() => {
-    if (found) return; $('#j-go').disabled = false;
+    if (found || S.joinId !== joinId) return; $('#j-go').disabled = false;
     $('#j-msg').textContent = '선생님 화면을 찾지 못했어요. 코드를 확인하고 다시 눌러 주세요.';
-  }, 5000);
+  }, 6500);
 }
 function enterStudent() { $('#j-go').disabled = false; show('student-view'); S.side = null; S.editing = null; resetForm(); renderStudent(); }
 function curStage() { return S.cfg?.stage || 0; }
@@ -921,7 +952,7 @@ function renderFriends() {
     li.querySelector('button').onclick = () => {
       const on2 = !S.me.likes.includes(c.id);
       S.me.likes = on2 ? [...S.me.likes, c.id] : S.me.likes.filter(x => x !== c.id); saveMe();
-      send(S.ch, 'like', { id: c.id, sid: S.me.sid, on: on2 }); renderFriends();
+      toTeacher('like', { id: c.id, sid: S.me.sid, on: on2 }); renderFriends();
     };
     ul.appendChild(li);
   }
@@ -968,10 +999,11 @@ function startEdit(id) {
 }
 function sendCard(c) {
   S.pending[c.id] = (S.pending[c.id] || 0) + 1;
-  send(S.ch, 'card', { id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev, stage: stOf(c), from: c.from || null });
+  toTeacher('card', { id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev, stage: stOf(c), from: c.from || null });
   setTimeout(() => { const cc = S.me.cards.find(x => x.id === c.id); if (cc && !cc.ok && S.pending[c.id] && S.pending[c.id] < 6) sendCard(cc); }, 3000);
 }
 function resendPending() { for (const c of S.me.cards) if (!c.ok) { S.pending[c.id] = 0; sendCard(c); } }
+function resendStalled() { for (const c of S.me.cards) if (!c.ok && !(S.pending[c.id] > 0 && S.pending[c.id] < 6)) { S.pending[c.id] = 0; sendCard(c); } }
 $('#s-sideL').onclick = () => setSide('L'); $('#s-sideR').onclick = () => setSide('R');
 $('#s-str').oninput = updatePreview; $('#s-text').oninput = updatePreview;
 $('#s-text').onkeydown = e => { if (e.key === 'Enter' && !$('#s-send').disabled) $('#s-send').click(); };
@@ -983,7 +1015,7 @@ $('#s-send').onclick = () => {
   else { c = { id: uid(), text, side: S.side, strength, rev: 0, ok: false, stage: curStage(), from: S.from || null }; S.me.cards.push(c); }
   saveMe(); resetForm(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('보냈어요');
 };
-$('#s-leave').onclick = () => { if (S.ch) client().removeChannel(S.ch); S.ch = null; history.replaceState(null, '', location.pathname); openJoin(''); };
+$('#s-leave').onclick = () => { leaveChannels(); S.joinId = null; history.replaceState(null, '', location.pathname); openJoin(''); };
 
 /* =================== 시작 =================== */
 $('#go-teacher').onclick = () => openSetup(false);
