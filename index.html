@@ -61,12 +61,27 @@ h2{font-size:20px;margin:0 0 12px}
 .rope{position:absolute;left:1%;right:1%;top:50%;height:12px;margin-top:-6px;border-radius:6px;
   background:repeating-linear-gradient(115deg,#b98b5a 0 10px,#94683b 10px 20px);box-shadow:0 2px 3px rgba(0,0,0,.15)}
 .flag{position:absolute;left:50%;top:50%;width:6px;height:70px;margin:-35px 0 0 -3px;background:#e0b100;border-radius:3px}
-.scale{position:absolute;top:50%;margin-top:10px;font-size:12px;color:#7a8394;transform:translateX(-50%);font-weight:700}
+.scale{position:absolute;top:50%;height:18px;margin-top:-9px;line-height:18px;padding:0 7px;border-radius:9px;background:rgba(255,255,255,.82);font-size:calc(11px * var(--fs,1));color:#7a8394;transform:translateX(-50%);font-weight:700;white-space:nowrap;z-index:3;pointer-events:none}
+.lane{position:absolute;left:0;right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:0 14%;line-height:1.25;z-index:0}
+.lane.top{top:0;bottom:50%}
+.lane.bot{top:50%;bottom:0}
+.lane b{font-size:calc(40px * var(--fs,1));font-weight:900;color:rgba(29,36,51,.12)}
+.lane span{font-size:calc(20px * var(--fs,1));font-weight:800;color:rgba(29,36,51,.22);margin-top:4px}
+.lane.wait span{color:rgba(29,36,51,.32)}
+#links{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:65;overflow:visible}
+.countbar{display:none;padding:7px 16px;background:#fff;border-bottom:1px solid var(--line);font-size:calc(16px * var(--fs,1));gap:8px 22px;flex-wrap:wrap;align-items:center}
+.countbar.show{display:flex}
+.countbar .cl{font-weight:800;color:var(--sub)}
+.countbar .cL{color:var(--L);font-weight:800} .countbar .cR{color:var(--R);font-weight:800}
+.countbar .cc{color:#8a6d00;font-weight:700}
 .card{position:absolute;width:var(--cw,9%);min-width:110px;background:var(--card);border-radius:10px;padding:7px 8px 6px;
   box-shadow:0 2px 6px rgba(20,30,50,.14);border:2px solid transparent;border-top:6px solid var(--L);cursor:grab;
   font-size:calc(15px * var(--fs,1));line-height:1.35;word-break:keep-all;overflow-wrap:anywhere;transform:translate(-50%,0)}
 .card.R{border-top-color:var(--R)}
 .card.sel{outline:3px solid #ffbf00;outline-offset:1px}
+.card.link{outline:3px dashed #e0a800;outline-offset:1px;opacity:1!important}
+.card.past{opacity:.55}
+.card.past:hover,.card.past.sel{opacity:1}
 .card.drag{cursor:grabbing;z-index:70!important;box-shadow:0 8px 18px rgba(20,30,50,.25)}
 .card.stk{box-shadow:0 -2px 6px rgba(20,30,50,.18),0 2px 6px rgba(20,30,50,.14)}
 .card:hover,.card.sel{z-index:60!important}
@@ -80,9 +95,11 @@ h2{font-size:20px;margin:0 0 12px}
 .card .moved{color:#8a6d00;font-weight:700}
 .card .likes{color:#d6336c;font-weight:800}
 .card .wf{font-size:calc(10px * var(--fs,1));background:#fff3bf;color:#8a6d00;border-radius:4px;padding:0 4px;font-weight:700}
+.card .chg{font-size:calc(10px * var(--fs,1));border-radius:4px;padding:0 4px;font-weight:800}
+.card .chg.same{background:#e3f6ea;color:#1f7a45} .card .chg.str{background:#fff3bf;color:#8a6d00} .card .chg.side{background:#ffe3ec;color:#b4234f} .card .chg.new{background:#eef0f5;color:#5b6577}
 .selbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:14px;padding:8px 10px;display:flex;gap:6px;align-items:center;z-index:80;box-shadow:0 6px 16px rgba(0,0,0,.25)}
 .selbar button{background:#fff;font-size:14px;padding:6px 10px}
-.empty-hint{position:absolute;left:50%;top:62%;transform:translateX(-50%);color:#7a8394;text-align:center;font-size:16px;line-height:1.7;pointer-events:none}
+.empty-hint{position:absolute;left:50%;top:24%;transform:translateX(-50%);color:#7a8394;text-align:center;font-size:16px;line-height:1.7;pointer-events:none}
 .status{font-size:13px;color:var(--sub);white-space:nowrap}
 
 /* overlay */
@@ -105,10 +122,23 @@ h2{font-size:20px;margin:0 0 12px}
 .sidebtns button.L.on{background:var(--L);color:#fff} .sidebtns button.R.on{background:var(--R);color:#fff}
 .slider{width:100%;accent-color:var(--ink);height:34px}
 .strlabels{display:flex;justify-content:space-between;font-size:13px;color:var(--sub)}
-.preview{position:relative;height:44px;margin:14px 0 4px;border-radius:10px;background:linear-gradient(90deg,var(--Lbg) 50%,var(--Rbg) 50%)}
-.preview .pr{position:absolute;left:3%;right:3%;top:50%;height:6px;margin-top:-3px;background:var(--rope);border-radius:3px}
-.preview .pf{position:absolute;left:50%;top:6px;bottom:6px;width:3px;margin-left:-1.5px;background:#e0b100}
-.preview .pm{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--ink);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:left .2s}
+/* 학생 미니 밧줄: 내 카드를 끌어 쪽·세기를 정한다(10칸에 자석처럼 붙음) */
+.mrope{position:relative;height:104px;margin:4px 0 6px;border-radius:12px;background:linear-gradient(90deg,var(--Lbg) 50%,var(--Rbg) 50%);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.mrope .pr{position:absolute;left:2%;right:2%;top:60px;height:8px;margin-top:-4px;border-radius:4px;background:repeating-linear-gradient(115deg,#b98b5a 0 8px,#94683b 8px 16px)}
+.mrope .pf{position:absolute;left:50%;top:34px;height:44px;width:4px;margin-left:-2px;background:#e0b100;border-radius:2px}
+.mrope .tk{position:absolute;top:68px;transform:translateX(-50%);font-size:11px;color:#7a8394;text-align:center;line-height:1.2;white-space:nowrap;font-weight:700;pointer-events:none}
+.mrope .tk small{display:block;font-weight:500;font-size:10px}
+.mrope .tok{position:absolute;top:52px;transform:translate(-50%,-100%);min-width:58px;max-width:120px;background:#fff;border-radius:8px;border-top:5px solid var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.28);padding:3px 7px;font-size:12px;line-height:1.3;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:grab;transition:left .15s;z-index:2}
+.mrope .tok.L{border-top-color:var(--L)} .mrope .tok.R{border-top-color:var(--R)}
+.mrope .tok.unset{opacity:.55;border-top-color:#9aa3b2}
+.mrope.drag .tok{transition:none;cursor:grabbing;box-shadow:0 6px 14px rgba(0,0,0,.3)}
+.mrope .ghost{position:absolute;top:60px;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px dashed #8a6d00;background:#fff8db;z-index:1;pointer-events:none}
+.ghost-note{font-size:12px;color:#8a6d00;margin-top:-2px}
+.mycards-h{font-size:14px;font-weight:800;color:var(--sub);margin:12px 0 6px}
+.mycards-h:first-child{margin-top:0}
+.mycards .acts{display:flex;gap:6px}
+.mycards .linkto{font-size:13px;color:#8a6d00;font-weight:700;margin-top:4px}
+.mycards li.past{opacity:.85}
 .mycards{list-style:none;padding:0;margin:0}
 .mycards li{border:1px solid var(--line);border-left:6px solid var(--L);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff}
 .mycards li.R{border-left-color:var(--R)}
@@ -163,7 +193,7 @@ h2{font-size:20px;margin:0 0 12px}
       <button id="setup-go" class="primary">판 만들기</button>
     </div>
   </div>
-  <p class="note">· 학생 화면에서는 한쪽 끝을 고르고, 당기는 세기를 1~5단계로 정해 근거 한 줄을 보내요.<br>· 세기 5는 그 끝에 가장 가깝게, 1은 가운데 가까이에 놓여요.</p>
+  <p class="note">· 학생은 근거 한 줄을 쓰고, 줄 위 내 카드를 끌어(또는 버튼으로) 쪽과 세기(1 살짝 ~ 5 아주 세게)를 정해 보내요.<br>· 세기 5는 그 끝에 가장 가깝게, 1은 가운데 가까이에 놓여요.<br>· 처음 생각은 줄 위쪽에, 「그런데 만약에?」 뒤의 만약에 생각은 줄 아래쪽에 놓여 두 생각을 한눈에 비교해요.</p>
 </section>
 
 <!-- 교사 공유 화면 -->
@@ -176,16 +206,21 @@ h2{font-size:20px;margin:0 0 12px}
       <button id="t-names">이름 보이기</button>
       <button id="t-share" title="학생 화면에 친구 근거를 보여 주고 공감 표시를 받아요">친구 근거 공유</button>
       <button id="t-whatif">그런데 만약에?</button>
+      <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
       <button id="t-export">내보내기</button>
       <button id="t-fontdown">가-</button><button id="t-fontup">가+</button>
       <button id="t-more">⋯</button>
     </div>
   </div>
   <div class="whatif-bar" id="b-whatif"></div>
+  <div class="countbar" id="b-countbar"></div>
   <div id="board">
+    <div class="lane top" id="b-lane-top"><b>처음 생각</b></div>
+    <div class="lane bot" id="b-lane-bot"></div>
     <div class="endlabel L" id="b-l"></div>
     <div class="endlabel R" id="b-r"></div>
     <div class="rope"></div><div class="flag"></div>
+    <svg id="links"></svg>
     <div class="empty-hint" id="b-empty">학생들이 근거를 보내면 여기에 카드가 놓여요.<br>위쪽 <b>접속 코드</b>를 눌러 QR을 크게 띄워 주세요.</div>
   </div>
   <div class="selbar hide" id="selbar">
@@ -222,12 +257,15 @@ h2{font-size:20px;margin:0 0 12px}
     <h2 id="s-form-title">내 근거 보내기</h2>
     <div class="field"><label for="s-text">근거 한 줄</label>
       <input type="text" id="s-text" maxlength="60" placeholder="왜 그렇게 생각하나요? 핵심만 짧게"></div>
+    <div class="field"><label>줄 위에 내 근거를 놓아요 <span class="note" style="font-weight:500">· 카드를 끌거나 줄을 눌러요</span></label>
+      <div class="mrope" id="s-mrope" aria-hidden="true"><div class="pr"></div><div class="pf"></div><div class="ghost hide" id="s-ghost"></div><div class="tok unset" id="s-tok">내 근거</div></div>
+      <div class="ghost-note hide" id="s-ghost-note">점선 ○은 처음 자리예요.</div>
+    </div>
     <div class="field"><label>어느 쪽으로 당길까요?</label>
       <div class="sidebtns"><button class="L" id="s-sideL"></button><button class="R" id="s-sideR"></button></div></div>
     <div class="field"><label for="s-str">얼마나 세게 당길까요? <b id="s-strv">3</b></label>
       <input type="range" class="slider" id="s-str" min="1" max="5" step="1" value="3">
       <div class="strlabels"><span>1 살짝</span><span>3 보통</span><span>5 아주 세게</span></div>
-      <div class="preview"><div class="pr"></div><div class="pf"></div><div class="pm" id="s-pm" style="left:50%"></div></div>
     </div>
     <div class="row" style="justify-content:flex-end">
       <button id="s-cancel-edit" class="hide">취소</button>
@@ -236,7 +274,7 @@ h2{font-size:20px;margin:0 0 12px}
   </div>
   <div class="panel">
     <h2>내가 보낸 근거</h2>
-    <ul class="mycards" id="s-mine"></ul>
+    <div id="s-mine"></div>
     <p class="note" id="s-mine-empty">아직 보낸 근거가 없어요.</p>
   </div>
   <div class="panel hide" id="s-friends-panel">
@@ -259,7 +297,7 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { if (!LS.warned) { LS.warned = true; setTimeout(() => toast('이 기기에 저장되지 않고 있어요. 활동 뒤 꼭 「내보내기」로 저장해 주세요.', 6000), 0); } } },
   del(k) { try { localStorage.removeItem(k); } catch {} }
 };
 let sb = null;
@@ -291,10 +329,20 @@ function modal(html, onMount) {
 const T = { g: null, ch: null, sel: new Set(), connected: false };
 const gameKey = code => 'tow:game:' + code;
 function saveGame() { if (T.g) { LS.set(gameKey(T.g.code), T.g); LS.set('tow:last', T.g.code); } }
+/* 단계(stage): 0 = 처음 생각(줄 위), k = k번째 「그런데 만약에?」 뒤 만약에 생각(줄 아래, 마지막 단계만 판에 보임) */
+const stageOf = c => c.stage ?? c.phase ?? 0;
+function lastStage() { return allWhatifs().length; }
+function inputStage() { return T.g.whatif.length ? allWhatifs().length : 0; }
+function onBoard(c) { const st = stageOf(c); return !c.hidden && (st === 0 || st === lastStage()); }
+function changeOf(c) {
+  if (!stageOf(c)) return '';
+  const par = c.from && T.g.cards.find(x => x.id === c.from);
+  return !par ? '새 근거' : par.side !== c.side ? '쪽 바뀜' : par.strength !== c.strength ? '세기 바뀜' : '그대로';
+}
 function cfgPayload() {
   const g = T.g;
-  return { question: g.question, left: g.left, right: g.right, whatif: g.whatif.at(-1) || null, share: g.share,
-    board: g.share ? g.cards.filter(c => !c.hidden).map(c => ({ id: c.id, text: c.text, side: c.side, strength: c.strength, likes: (c.likes || []).length })) : null };
+  return { question: g.question, left: g.left, right: g.right, whatif: g.whatif.at(-1) || null, share: g.share, stage: inputStage(),
+    board: g.share ? g.cards.filter(c => !c.hidden).map(c => ({ id: c.id, text: c.text, side: c.side, strength: c.strength, stage: stageOf(c), likes: (c.likes || []).length })) : null };
 }
 let cfgTimer = null;
 function pushConfig() { clearTimeout(cfgTimer); cfgTimer = setTimeout(() => send(T.ch, 'config', cfgPayload()), 150); }
@@ -336,7 +384,8 @@ function onCard(p) {
   if (!p.id || !p.text || !['L', 'R'].includes(p.side)) return;
   const s = Math.max(1, Math.min(5, parseInt(p.strength) || 3));
   const text = String(p.text).slice(0, 60), name = String(p.name || '').slice(0, 12);
-  const phase = T.g.whatif.length ? allWhatifs().length : 0;
+  const phase = inputStage();
+  const stage = Number.isInteger(p.stage) ? Math.max(0, Math.min(lastStage(), p.stage)) : phase;
   let c = T.g.cards.find(x => x.id === p.id);
   if (c) {
     if (c.rev >= (p.rev || 0)) { send(T.ch, 'ack', { id: p.id, rev: c.rev }); return; }
@@ -346,7 +395,8 @@ function onCard(p) {
     // 학생이 위치를 바꾸면 새 칸으로 다시 놓는다(교사가 묶은 카드는 그대로)
     if (posChanged && !c.group) { delete c.x; delete c.y; }
   } else {
-    c = { id: p.id, sid: p.sid, name, text, side: p.side, strength: s, rev: p.rev || 0, phase, likes: [], hidden: false,
+    const from = p.from && T.g.cards.some(x => x.id === p.from) ? p.from : null;
+    c = { id: p.id, sid: p.sid, name, text, side: p.side, strength: s, rev: p.rev || 0, phase: stage, stage, from, likes: [], hidden: false,
       history: [{ side: p.side, strength: s, text, phase, t: Date.now() }] };
     T.g.cards.push(c);
   }
@@ -360,19 +410,50 @@ function onLike(p) {
   saveGame(); renderBoard(); pushConfig();
 }
 const colX = (side, s) => side === 'L' ? 50 - (s - 0.5) * 9.4 : 50 + (s - 0.5) * 9.4;
+const scaleLabel = s => s === 1 ? '1 살짝' : s === 3 ? '3 보통' : s === 5 ? '5 아주 세게' : String(s);
 function layout() {
-  // 자동 배치: 같은 칸(쪽·세기) 카드를 줄 위아래로 번갈아 쌓는다
+  // 자동 배치(초깃값): 처음 생각은 줄 위로, 만약에 생각은 줄 아래로 쌓는다. 실제 높이는 renderBoard에서 다시 잰다.
   const board = $('#board'); const H = board.clientHeight || 600;
   const slots = {}; const pos = {};
-  const vis = T.g.cards.filter(c => !c.hidden);
+  const vis = T.g.cards.filter(onBoard);
   for (const c of vis) {
     if (c.x != null) { pos[c.id] = { x: c.x, y: c.y }; continue; }
-    const k = c.side + c.strength; const n = slots[k] = (slots[k] ?? -1) + 1;
-    const step = 78 * (T.g.fs || 1); const lvl = Math.floor(n / 2);
-    const yPx = n % 2 === 0 ? H / 2 - 18 - step * (lvl + 1) + 0 : H / 2 + 30 + step * lvl;
+    const up = stageOf(c) === 0;
+    const k = (up ? 't' : 'b') + c.side + c.strength; const n = slots[k] = (slots[k] ?? -1) + 1;
+    const step = 78 * (T.g.fs || 1);
+    const yPx = up ? H / 2 - 14 - step * (n + 1) : H / 2 + 14 + step * n;
     pos[c.id] = { x: colX(c.side, c.strength), y: Math.max(6, Math.min(97, yPx / H * 100)) };
   }
   return pos;
+}
+function stageStats(stage) { // 학생(sid)마다 그 단계의 가장 최근 카드 1장으로 셈다(세기와 무관, 숨긴 카드 제외)
+  const by = {};
+  for (const c of T.g.cards) {
+    if (c.hidden || stageOf(c) !== stage) continue;
+    const k = c.sid || c.id, t = (c.history.at(-1) || {}).t || 0;
+    if (!by[k] || t >= by[k].t) by[k] = { side: c.side, strength: c.strength, t };
+  }
+  const v = Object.values(by);
+  return { by, n: v.length, L: v.filter(x => x.side === 'L').length, R: v.filter(x => x.side === 'R').length };
+}
+function changeSummary() {
+  const s0 = stageStats(0), ls = lastStage(); if (!ls) return null;
+  const sk = stageStats(ls); let side = 0, str = 0, same = 0;
+  for (const k of Object.keys(sk.by)) { const a = s0.by[k], b = sk.by[k]; if (!a) continue; if (a.side !== b.side) side++; else if (a.strength !== b.strength) str++; else same++; }
+  return { s0, sk, all: new Set([...Object.keys(s0.by), ...Object.keys(sk.by)]).size, side, str, same };
+}
+function renderCounts() {
+  const g = T.g, bar = $('#b-countbar');
+  $('#t-count').classList.toggle('on', !!g.showCount);
+  $('#t-count').textContent = g.showCount ? '찬반 수 숨기기' : '찬반 수';
+  bar.classList.toggle('show', !!g.showCount); if (!g.showCount) return;
+  const s0 = stageStats(0), cs = changeSummary();
+  let h = `<span><span class="cl">처음 생각</span> <span class="cL">◀ ${esc(g.left)} ${s0.L}명</span> · <span class="cR">${esc(g.right)} ${s0.R}명 ▶</span></span>`;
+  if (cs) {
+    h += `<span><span class="cl">만약에 생각</span> <span class="cL">◀ ${cs.sk.L}명</span> · <span class="cR">${cs.sk.R}명 ▶</span> <span class="note">(참여 ${cs.sk.n}/${cs.all}명)</span></span>`;
+    h += `<span class="cc">쪽이 바뀜 친구 ${cs.side} · 세기만 바뀜 친구 ${cs.str} · 그대로 ${cs.same}</span>`;
+  }
+  bar.innerHTML = h;
 }
 function renderBoard() {
   const g = T.g; if (!g) return;
@@ -385,40 +466,59 @@ function renderBoard() {
   $('#t-share').classList.toggle('on', g.share);
   const wf = g.whatif.at(-1);
   $('#b-whatif').classList.toggle('show', !!wf);
-  $('#b-whatif').innerHTML = wf ? `그런데 만약에? ${esc(wf)}<small>학생들은 내 근거를 다시 놓거나 새 근거를 보낼 수 있어요</small>` : '';
+  $('#b-whatif').innerHTML = wf ? `그런데 만약에? ${esc(wf)}<small>처음 생각은 줄 위에 남고, 만약에 생각은 줄 아래에 놓여요</small>` : '';
+  renderCounts();
+  const ls = lastStage(), wfs = allWhatifs();
+  const older = g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== ls).length;
+  const lb = $('#b-lane-bot');
+  lb.className = 'lane bot' + (ls ? '' : ' wait');
+  lb.innerHTML = ls ? `<b>만약에 생각</b><span>${esc(wfs[ls - 1])}</span>${older ? `<span style="font-size:13px;font-weight:600">앞선 만약에 카드 ${older}장은 내보내기에 남아 있어요</span>` : ''}`
+    : `<span>「그런데 만약에?」를 띄우면<br>만약에 생각이 여기(줄 아래)에 놓여요</span>`;
   board.querySelectorAll('.card,.scale').forEach(e => e.remove());
   for (let s = 1; s <= 5; s++) for (const side of ['L', 'R']) {
-    const e = document.createElement('div'); e.className = 'scale'; e.style.left = colX(side, s) + '%'; e.textContent = s; board.appendChild(e);
+    const e = document.createElement('div'); e.className = 'scale'; e.style.left = colX(side, s) + '%'; e.textContent = scaleLabel(s); board.appendChild(e);
   }
-  const vis = g.cards.filter(c => !c.hidden);
+  const vis = g.cards.filter(onBoard);
+  // 선택한 카드와 이어진 카드: 같은 학생의 다른 카드는 점선 테두리, 처음→만약에 연결은 화살표
+  const linked = new Set(), pairs = [];
+  for (const id of T.sel) {
+    const c = vis.find(x => x.id === id); if (!c) continue;
+    for (const o of vis) {
+      if (o.id === c.id) continue;
+      if (c.sid && o.sid === c.sid) linked.add(o.id);
+      if (o.id === c.from) { pairs.push([o.id, c.id]); linked.add(o.id); }
+      if (o.from === c.id) { pairs.push([c.id, o.id]); linked.add(o.id); }
+    }
+  }
   $('#b-count').textContent = vis.length;
   $('#b-empty').classList.toggle('hide', vis.length > 0);
   const pos = layout();
   vis.forEach(c => {
     const e = document.createElement('div');
-    e.className = 'card ' + c.side + (T.sel.has(c.id) ? ' sel' : '');
+    e.className = 'card ' + c.side + (T.sel.has(c.id) ? ' sel' : '') + (linked.has(c.id) && !T.sel.has(c.id) ? ' link' : '') + (ls && stageOf(c) === 0 ? ' past' : '');
     e.dataset.id = c.id;
     e.style.left = pos[c.id].x + '%'; e.style.top = pos[c.id].y + '%';
     const grp = c.group && g.groups[c.group];
     if (grp) e.style.borderColor = grp.color, e.style.borderTopColor = c.side === 'L' ? 'var(--L)' : 'var(--R)';
     const strDots = '<i>' + '●'.repeat(c.strength) + '</i>' + '○'.repeat(5 - c.strength);
     const moved = c.history.length > 1 && (c.history[0].side !== c.side || c.history[0].strength !== c.strength);
+    const chg = changeOf(c), chgCls = { '그대로': 'same', '세기 바뀜': 'str', '쪽 바뀜': 'side', '새 근거': 'new' }[chg];
     e.innerHTML = (grp ? `<span class="tag" style="background:${grp.color}">${esc(grp.label || '묶음')}</span><br>` : '') +
       `<span class="tx">${esc(c.text)}</span>` +
       `<div class="meta"><span class="str">${strDots}</span>` +
-      (c.phase ? '<span class="wf">만약에</span>' : '') +
-      (moved ? `<span class="moved" title="처음: ${c.history[0].side === 'L' ? esc(g.left) : esc(g.right)} ${c.history[0].strength}">↔ 옮김</span>` : '') +
+      (chg ? `<span class="chg ${chgCls}">${chg}</span>` : '') +
+      (moved ? `<span class="moved" title="처음 보낸 자리: ${c.history[0].side === 'L' ? esc(g.left) : esc(g.right)} ${c.history[0].strength}">↔ 다시 놓음</span>` : '') +
       ((c.likes || []).length ? `<span class="likes">♥${c.likes.length}</span>` : '') +
       (g.showNames && c.name ? `<span>${esc(c.name)}</span>` : '') + '</div>';
     board.appendChild(e);
   });
-  // 자동 배치 카드는 실제 높이를 재서 같은 칸 안에 쌓는다(줄 위·아래 번갈아).
+  // 자동 배치 카드는 실제 높이를 재서 같은 칸 안에 쌓는다(처음 생각은 줄 위, 만약에 생각은 줄 아래).
   // 한 칸에 카드가 많아 판을 넘치면 카드를 겡쳐 쌓아 첫 줄이 보이게 하고, 누르면(선택) 앞으로 나온다.
   const H = board.clientHeight || 600, gap = 8, mid = H / 2, MINSTEP = 18 * (g.fs || 1);
   const topLim = Math.max(8, ...[...board.querySelectorAll('.endlabel')].map(e => e.offsetTop + e.offsetHeight + 6));
   const botLim = H - 6;
   const cols = {};
-  vis.filter(c => c.x == null).forEach(c => (cols[c.side + c.strength] ||= []).push(c));
+  vis.filter(c => c.x == null).forEach(c => (cols[(stageOf(c) ? 'b' : 't') + c.side + c.strength] ||= []).push(c));
   const place = (els, start, avail, dir) => { // dir -1: 줄 위로, +1: 줄 아래로
     if (!els.length) return;
     let hs = els.map(e => e.offsetHeight);
@@ -436,10 +536,10 @@ function renderBoard() {
       if (dir < 0) y = fit ? y - gap : top; else y = fit ? y + h + gap : y + step;
     });
   };
-  for (const list of Object.values(cols)) {
+  for (const [k, list] of Object.entries(cols)) {
     const els = list.map(c => board.querySelector(`.card[data-id="${c.id}"]`)).filter(Boolean);
-    place(els.filter((e, i) => i % 2 === 0), mid - 16, mid - 16 - topLim, -1);
-    place(els.filter((e, i) => i % 2 === 1), mid + 30, botLim - (mid + 30), 1);
+    if (k[0] === 't') place(els, mid - 14, mid - 14 - topLim, -1);
+    else place(els, mid + 14, botLim - (mid + 14), 1);
   }
   // 묶음은 첫 카드 아래로 실제 높이만큼 이어 붙인다(화면 크기가 바뀌어도 겹치지 않게)
   for (const gid of Object.keys(g.groups)) {
@@ -451,10 +551,29 @@ function renderBoard() {
       yPx += el.offsetHeight + 10;
     }
   }
+  drawLinks(board, pairs);
   updateSelbar();
 }
+function drawLinks(board, pairs) {
+  const svg = $('#links'); svg.innerHTML = ''; if (!pairs.length) return;
+  const br = board.getBoundingClientRect(); const seen = new Set();
+  let h = '<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e0a800"/></marker></defs>';
+  for (const [a, b] of pairs) {
+    if (seen.has(a + b)) continue; seen.add(a + b);
+    const ea = board.querySelector(`.card[data-id="${a}"]`), eb = board.querySelector(`.card[data-id="${b}"]`); if (!ea || !eb) continue;
+    const ra = ea.getBoundingClientRect(), rb = eb.getBoundingClientRect();
+    // 두 카드의 가운데를 잇는 직선을 카드 테두리에서 자른다(줄을 따라 누워 보이지 않게)
+    const ca = [ra.left + ra.width / 2 - br.left, ra.top + ra.height / 2 - br.top], cb = [rb.left + rb.width / 2 - br.left, rb.top + rb.height / 2 - br.top];
+    const dx = cb[0] - ca[0], dy = cb[1] - ca[1];
+    const cut = (r, pad) => Math.min(dx ? (r.width / 2 + pad) / Math.abs(dx) : 1e9, dy ? (r.height / 2 + pad) / Math.abs(dy) : 1e9);
+    const sa = cut(ra, 2), sb = cut(rb, 6); if (sa + sb >= 1) continue;
+    const x1 = ca[0] + dx * sa, y1 = ca[1] + dy * sa, x2 = cb[0] - dx * sb, y2 = cb[1] - dy * sb;
+    h += `<path d="M${x1},${y1} L${x2},${y2}" fill="none" stroke="#e0a800" stroke-width="4" stroke-dasharray="9 6" stroke-linecap="round" marker-end="url(#ah)"/>`;
+  }
+  svg.innerHTML = h;
+}
 function updateSelbar() {
-  for (const id of [...T.sel]) if (!T.g.cards.some(c => c.id === id && !c.hidden)) T.sel.delete(id);
+  for (const id of [...T.sel]) if (!T.g.cards.some(c => c.id === id && onBoard(c))) T.sel.delete(id);
   $('#selbar').classList.toggle('hide', T.sel.size === 0);
   $('#sel-n').textContent = T.sel.size + '장 선택';
   $('#s-ungroup').disabled = ![...T.sel].some(id => T.g.cards.find(c => c.id === id)?.group);
@@ -525,7 +644,7 @@ function showQR() {
 }
 function askWhatif() {
   const prev = allWhatifs().map((w, i) => `<li>${i + 1}. ${esc(w)}</li>`).join('');
-  modal(`<h2>그런데 만약에?</h2><p class="note">생각을 흔드는 질문을 띄우면 학생 화면에도 보여요. 학생은 내 근거를 다시 놓거나(옮긴 기록이 남아요) 새 근거를 보낼 수 있어요.</p>
+  modal(`<h2>그런데 만약에?</h2><p class="note">생각을 흔드는 질문을 띄우면 학생 화면에도 보여요. 학생은 처음 생각마다 「그대로예요」를 누르거나 자리를 옮겨 ‘만약에 생각’으로 보내고, 새 근거를 보낼 수도 있어요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 카드를 누르면 같은 학생의 처음→만약에 화살표가 보여요.<br>· 새 질문을 또 띄우면 줄 아래는 새 만약에 생각으로 바뀌고, 앞선 카드는 내보내기에 남아요.<br>· 「질문 내리기」를 하면 학생 입력은 처음 질문으로 돌아가고, 줄 아래 카드는 그대로 남아요.</p>
     <input type="text" id="wf-in" maxlength="60" placeholder="예) 사자가 다시 커진다면?">
     ${prev ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문</p><ul class="note">${prev}</ul>` : ''}
     <div class="actions">${T.g.whatif.length ? '<button data-a="off">질문 내리기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok">띄우기</button></div>`, (ov, close) => {
@@ -542,18 +661,27 @@ function hideWhatif() { // 질문 기록은 남기고 화면에서만 내림
 function allWhatifs() { return [...(T.g.whatifArchive || []), ...T.g.whatif]; }
 function sideName(s) { return s === 'L' ? T.g.left : T.g.right; }
 function exportRows() {
-  const wfs = allWhatifs();
-  let n = 0;
-  return T.g.cards.filter(c => !c.hidden).map(c => {
-    n++;
-    const who = T.g.showNames && c.name ? c.name : '학생' + n;
+  // 처음 생각 → 만약에 순서로 번호를 매기고, 이름을 숨길 때는 같은 학생에게 같은 「학생N」을 준다(1·2차 비교용)
+  const vis = T.g.cards.filter(c => !c.hidden).map((c, i) => [c, i]).sort((a, b) => stageOf(a[0]) - stageOf(b[0]) || a[1] - b[1]).map(x => x[0]);
+  const num = {}, sidNo = {}; let sn = 0;
+  vis.forEach((c, i) => { num[c.id] = i + 1; const k = c.sid || c.id; if (!sidNo[k]) sidNo[k] = ++sn; });
+  return vis.map(c => {
+    const n = num[c.id], st = stageOf(c);
+    const who = T.g.showNames && c.name ? c.name : '학생' + sidNo[c.sid || c.id];
     const first = c.history[0];
-    const path = c.history.map((h, i) => `${i && h.phase ? `(만약에 ${h.phase} 뒤) ` : ''}${sideName(h.side)} ${h.strength}`).join(' → ');
-    return { 번호: n, 이름: who, 쪽: sideName(c.side), 세기: c.strength, 위치: (c.side === 'L' ? '-' : '+') + c.strength,
-      근거: c.text, 보낸때: c.phase ? `만약에 ${c.phase} 뒤` : '기본 질문', 처음위치: `${sideName(first.side)} ${first.strength}`,
-      위치변화: c.history.length > 1 ? path : '', 처음근거: first.text !== c.text ? first.text : '',
+    const path = c.history.map(h => `${sideName(h.side)} ${h.strength}`).join(' → ');
+    const par = c.from && T.g.cards.find(x => x.id === c.from);
+    return { 번호: n, 이름: who, 단계: st ? `만약에 ${st}` : '처음 생각', 쪽: sideName(c.side), 세기: c.strength, 위치: (c.side === 'L' ? '-' : '+') + c.strength,
+      근거: c.text, 이어진처음생각: par && num[par.id] ? num[par.id] + '번' : '', 변화: changeOf(c),
+      다시놓은기록: c.history.length > 1 ? path : '', 처음근거: first.text !== c.text ? first.text : '',
       공감: (c.likes || []).length, 묶음: c.group ? (T.g.groups[c.group]?.label || '묶음') : '' };
   });
+}
+function countLines() {
+  const s0 = stageStats(0), cs = changeSummary(), L = [`- 처음 생각(학생 수): ${T.g.left} ${s0.L}명, ${T.g.right} ${s0.R}명`];
+  if (cs) L.push(`- 만약에 생각(학생 수): ${T.g.left} ${cs.sk.L}명, ${T.g.right} ${cs.sk.R}명 (참여 ${cs.sk.n}/${cs.all}명)`, `- 변화: 쪽이 바뀜 ${cs.side}명, 세기만 바뀜 ${cs.str}명, 그대로 ${cs.same}명`);
+  L.push('- 학생 수는 학생마다 그 단계의 가장 최근 카드 1장으로 셈(세기 무관, 숨긴 카드 제외)');
+  return L;
 }
 function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
 function fileBase() { const d = new Date(); return `생각줄다리기_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${T.g.code}`; }
@@ -561,7 +689,7 @@ function exportCSV() {
   const rows = exportRows(); if (!rows.length) return toast('아직 카드가 없어요');
   const cols = Object.keys(rows[0]);
   const q = v => '"' + String(v).replace(/"/g, '""') + '"';
-  const head = [`질문,${q(T.g.question)}`, `왼쪽 끝(-),${q(T.g.left)}`, `오른쪽 끝(+),${q(T.g.right)}`, ...allWhatifs().map((w, i) => `만약에 질문 ${i + 1},${q(w)}`), ''];
+  const head = [`질문,${q(T.g.question)}`, `왼쪽 끝(-),${q(T.g.left)}`, `오른쪽 끝(+),${q(T.g.right)}`, ...allWhatifs().map((w, i) => `만약에 질문 ${i + 1},${q(w)}`), ...countLines().map(l => q(l.slice(2))), ''];
   const csv = '\ufeff' + head.join('\r\n') + '\r\n' + cols.map(q).join(',') + '\r\n' + rows.map(r => cols.map(c => q(r[c])).join(',')).join('\r\n');
   download(fileBase() + '.csv', new Blob([csv], { type: 'text/csv;charset=utf-8' }));
 }
@@ -570,8 +698,9 @@ function exportText() {
   const L = [`# 생각 줄다리기 기록 (${new Date().toLocaleDateString('ko-KR')})`, `- 질문: ${T.g.question}`, `- 왼쪽 끝(-): ${T.g.left}`, `- 오른쪽 끝(+): ${T.g.right}`, `- 세기: 1(가운데 가까움)~5(그 끝에 가장 가까움)`];
   allWhatifs().forEach((w, i) => L.push(`- 그런데 만약에? ${i + 1}: ${w}`));
   const groups = Object.values(T.g.groups); if (groups.length) L.push(`- 교사가 묶은 묶음: ${groups.map(x => x.label || '이름 없음').join(', ')}`);
-  L.push('', '| 번호 | 이름 | 쪽 | 세기 | 근거 | 보낸 때 | 위치 변화 | 공감 | 묶음 |', '|---|---|---|---|---|---|---|---|---|');
-  for (const r of rows) L.push(`| ${r.번호} | ${r.이름} | ${r.쪽} | ${r.세기} | ${r.근거.replace(/\|/g, '/')}${r.처음근거 ? ` (처음: ${r.처음근거.replace(/\|/g, '/')})` : ''} | ${r.보낸때} | ${r.위치변화 || '-'} | ${r.공감} | ${r.묶음 || '-'} |`);
+  L.push(...countLines());
+  L.push('', '| 번호 | 이름 | 단계 | 쪽 | 세기 | 근거 | 이어진 처음 생각 | 변화 | 다시 놓은 기록 | 공감 | 묶음 |', '|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const r of rows) L.push(`| ${r.번호} | ${r.이름} | ${r.단계} | ${r.쪽} | ${r.세기} | ${r.근거.replace(/\|/g, '/')}${r.처음근거 ? ` (처음: ${r.처음근거.replace(/\|/g, '/')})` : ''} | ${r.이어진처음생각 || '-'} | ${r.변화 || '-'} | ${r.다시놓은기록 || '-'} | ${r.공감} | ${r.묶음 || '-'} |`);
   return L.join('\n');
 }
 async function exportPNG() {
@@ -583,7 +712,7 @@ async function exportPNG() {
 }
 function exportMenu() {
   const names = T.g.showNames ? '지금 「이름 보이기」 상태라 이름이 함께 저장돼요.' : '이름은 「학생1, 학생2…」로 바꿔 저장해요. 이름까지 넣으려면 먼저 「이름 보이기」를 눌러 주세요.';
-  modal(`<h2>내보내기</h2><p class="note">근거 카드와 위치(쪽·세기), 「만약에」 뒤 위치 변화, 공감 수, 묶음을 함께 저장해요.<br>${names}</p>
+  modal(`<h2>내보내기</h2><p class="note">근거 카드와 위치(쪽·세기), 처음 생각과 이어진 만약에 생각(그대로·세기 바뀜·쪽 바뀜·새 근거), 쪽별 학생 수, 공감 수, 묶음을 함께 저장해요.<br>${names}</p>
     <div class="actions" style="justify-content:flex-start"><button data-a="png">이미지(PNG)</button><button data-a="csv">표(CSV · 엑셀)</button><button data-a="txt">표 복사(AI·문서에 붙여넣기)</button></div>
     <div class="actions"><button class="primary" data-a="close">닫기</button></div>`, (ov, close) => {
     ov.querySelector('[data-a=close]').onclick = close;
@@ -632,6 +761,7 @@ $('#b-code').onclick = showQR;
 $('#t-names').onclick = () => { T.g.showNames = !T.g.showNames; saveGame(); renderBoard(); };
 $('#t-share').onclick = () => { T.g.share = !T.g.share; saveGame(); renderBoard(); pushConfig(); toast(T.g.share ? '학생 화면에 친구 근거(이름 없이)가 보여요' : '친구 근거 공유를 껐어요'); };
 $('#t-whatif').onclick = askWhatif;
+$('#t-count').onclick = () => { T.g.showCount = !T.g.showCount; saveGame(); renderBoard(); };
 $('#t-export').onclick = exportMenu;
 $('#t-more').onclick = moreMenu;
 $('#t-fontdown').onclick = () => { T.g.fs = Math.max(0.7, +(T.g.fs - 0.1).toFixed(1)); saveGame(); renderBoard(); };
@@ -644,13 +774,17 @@ $('#s-clear').onclick = () => { T.sel.clear(); renderBoard(); };
 window.addEventListener('resize', () => { if (T.g && !$('#board-view').classList.contains('hide')) renderBoard(); });
 
 /* =================== 학생 =================== */
-const S = { code: '', me: null, cfg: null, ch: null, side: null, editing: null, pending: {}, connected: false };
-const meKey = code => 'tow:me:' + code;
-function saveMe() { LS.set(meKey(S.code), S.me); }
+const S = { code: '', me: null, cfg: null, ch: null, side: null, editing: null, from: null, pending: {}, connected: false };
+// 학생 기록은 코드+이름별로 저장한다(한 기기에서 여러 학생이 들어가도 섞이지 않게). 탭마다 마지막 이름은 sessionStorage에.
+const meKey = (code, name) => 'tow:me:' + code + ':' + name;
+const nameKey = code => 'tow:name:' + code;
+function lastName(code) { let n = null; try { n = sessionStorage.getItem(nameKey(code)); } catch {} return n || LS.get(nameKey(code)) || LS.get('tow:me:' + code)?.name || ''; }
+function loadMe(code, name) { const old = LS.get('tow:me:' + code); return LS.get(meKey(code, name)) || (old && old.name === name ? old : null); }
+function saveMe() { LS.set(meKey(S.code, S.me.name), S.me); LS.set(nameKey(S.code), S.me.name); try { sessionStorage.setItem(nameKey(S.code), S.me.name); } catch {} }
+const stOf = c => c.stage || 0;
 function openJoin(code) {
   show('join-view');
-  const saved = code ? LS.get(meKey(code)) : null;
-  $('#j-code').value = code || ''; $('#j-name').value = saved?.name || '';
+  $('#j-code').value = code || ''; $('#j-name').value = code ? lastName(code) : '';
   $('#j-msg').textContent = '';
   (code ? $('#j-name') : $('#j-code')).focus();
 }
@@ -663,7 +797,7 @@ $('#j-go').onclick = () => {
 $('#j-name').onkeydown = e => { if (e.key === 'Enter') $('#j-go').click(); };
 function joinGame(code, name) {
   S.code = code;
-  S.me = LS.get(meKey(code)) || { sid: uid(), cards: [], likes: [] };
+  S.me = loadMe(code, name) || { sid: uid(), cards: [], likes: [] };
   S.me.name = name; saveMe();
   history.replaceState(null, '', '?c=' + code);
   $('#j-msg').textContent = '선생님 화면을 찾는 중…'; $('#j-go').disabled = true;
@@ -682,31 +816,71 @@ function joinGame(code, name) {
   }, 5000);
 }
 function enterStudent() { $('#j-go').disabled = false; show('student-view'); S.side = null; S.editing = null; resetForm(); renderStudent(); }
+function curStage() { return S.cfg?.stage || 0; }
+function formTitle() { return S.editing ? '내 근거 다시 놓기' : S.from ? '만약에 생각 놓기' : curStage() ? '만약에 생각 보내기' : '내 근거 보내기'; }
 function renderStudent() {
   const c = S.cfg; if (!c) return;
+  // 단계가 바뀌면(만약에 시작·내림) 쓰던 ‘옮기기’는 취소한다
+  if (S.from && !curStage()) resetForm();
   $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
   $('#s-q').textContent = c.question;
   $('#s-wf').classList.toggle('hide', !c.whatif);
-  $('#s-wf').textContent = c.whatif ? `그런데 만약에? ${c.whatif}` : '';
+  $('#s-wf').innerHTML = c.whatif ? `그런데 만약에? ${esc(c.whatif)}<div class="note" style="font-weight:500;margin-top:4px">아래 ‘처음 생각’을 그대로 둘지, 자리를 옮길지 정해요. 새 근거를 보내도 돼요.</div>` : '';
   $('#s-sideL').textContent = '◀ ' + c.left; $('#s-sideR').textContent = c.right + ' ▶';
+  $('#s-form-title').textContent = formTitle();
   renderMine(); renderFriends(); updatePreview();
 }
 function sideLabel(s) { return s === 'L' ? S.cfg?.left : S.cfg?.right; }
+function mineItem(c, extra) {
+  const li = document.createElement('li'); li.className = c.side;
+  li.innerHTML = `${esc(c.text)}<div class="m"><span>${esc(sideLabel(c.side) || '')} 쪽 · 세기 ${c.strength} · ${c.ok ? '<span class="okmark">✓ 도착</span>' : '<span class="waitmark">보내는 중…</span>'}</span><span class="acts"></span></div>` + (extra || '');
+  return li;
+}
 function renderMine() {
-  const ul = $('#s-mine'); ul.innerHTML = '';
+  const box = $('#s-mine'); box.innerHTML = '';
   $('#s-mine-empty').classList.toggle('hide', S.me.cards.length > 0);
-  for (const c of S.me.cards) {
-    const li = document.createElement('li'); li.className = c.side;
-    li.innerHTML = `${esc(c.text)}<div class="m"><span>${esc(sideLabel(c.side) || '')} 쪽 · 세기 ${c.strength} · ${c.ok ? '<span class="okmark">✓ 도착</span>' : '<span class="waitmark">보내는 중…</span>'}</span><button>다시 놓기</button></div>`;
-    li.querySelector('button').onclick = () => startEdit(c.id);
-    ul.appendChild(li);
-  }
+  const st = curStage();
+  const first = S.me.cards.filter(c => stOf(c) === 0), now = st ? S.me.cards.filter(c => stOf(c) === st) : [];
+  const older = S.me.cards.filter(c => stOf(c) > 0 && stOf(c) !== st);
+  const section = (title, list, build) => {
+    if (!list.length) return;
+    if (title) { const h = document.createElement('div'); h.className = 'mycards-h'; h.textContent = title; box.appendChild(h); }
+    const ul = document.createElement('ul'); ul.className = 'mycards'; list.forEach(c => ul.appendChild(build(c))); box.appendChild(ul);
+  };
+  section(st ? '처음 생각' : (older.length ? '처음 생각' : ''), first, c => {
+    const child = st ? S.me.cards.find(x => x.from === c.id && stOf(x) === st) : null;
+    const li = mineItem(c, child ? `<div class="linkto">→ 만약에: ${esc(sideLabel(child.side) || '')} 쪽 · 세기 ${child.strength}${child.side === c.side && child.strength === c.strength ? ' (그대로)' : ' (옮김)'}</div>` : '');
+    const acts = li.querySelector('.acts');
+    if (!st) { const b = document.createElement('button'); b.textContent = '다시 놓기'; b.onclick = () => startEdit(c.id); acts.appendChild(b); }
+    else if (!child) {
+      li.classList.add('past');
+      const k = document.createElement('button'); k.textContent = '그대로예요'; k.onclick = () => keepSame(c.id);
+      const m = document.createElement('button'); m.textContent = '옮기기'; m.onclick = () => startFrom(c.id);
+      acts.append(k, m);
+    } else li.classList.add('past');
+    return li;
+  });
+  section('만약에 생각', now, c => {
+    const li = mineItem(c); const b = document.createElement('button'); b.textContent = '다시 놓기'; b.onclick = () => startEdit(c.id); li.querySelector('.acts').appendChild(b); return li;
+  });
+  section('앞선 만약에 생각', older, c => { const li = mineItem(c); li.classList.add('past'); return li; });
+}
+function keepSame(id) {
+  const p = S.me.cards.find(x => x.id === id); if (!p) return;
+  const c = { id: uid(), text: p.text, side: p.side, strength: p.strength, rev: 0, ok: false, stage: curStage(), from: p.id };
+  S.me.cards.push(c); saveMe(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('처음 생각 그대로 보냈어요');
+}
+function startFrom(id) {
+  const p = S.me.cards.find(x => x.id === id); if (!p) return;
+  S.editing = null; S.from = id; $('#s-text').value = p.text; $('#s-str').value = p.strength; setSide(p.side);
+  $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.remove('hide');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function renderFriends() {
   const on = !!(S.cfg && S.cfg.share && S.cfg.board);
   $('#s-friends-panel').classList.toggle('hide', !on); if (!on) return;
   const mine = new Set(S.me.cards.map(c => c.id));
-  const list = S.cfg.board.filter(c => !mine.has(c.id));
+  const list = S.cfg.board.filter(c => !mine.has(c.id) && (c.stage || 0) === curStage());
   const ul = $('#s-friends'); ul.innerHTML = list.length ? '' : '<li>아직 친구 근거가 없어요.</li>';
   S.me.likes = S.me.likes || [];
   for (const c of list) {
@@ -722,22 +896,48 @@ function renderFriends() {
   }
 }
 function setSide(s) { S.side = s; $('#s-sideL').classList.toggle('on', s === 'L'); $('#s-sideR').classList.toggle('on', s === 'R'); updatePreview(); }
+// 미니 밧줄: 교사 판과 같은 10칸(왼쪽 5~1, 오른쪽 1~5)
+const mX = (side, s) => side === 'L' ? 50 - (s - 0.5) * 9.2 : 50 + (s - 0.5) * 9.2;
+(function buildMiniRope() {
+  const r = $('#s-mrope');
+  for (const side of ['L', 'R']) for (let s = 1; s <= 5; s++) {
+    const t = document.createElement('div'); t.className = 'tk'; t.style.left = mX(side, s) + '%';
+    t.innerHTML = s + (s === 1 ? '<small>살짝</small>' : s === 3 ? '<small>보통</small>' : s === 5 ? '<small>아주 세게</small>' : '<small>&nbsp;</small>');
+    r.appendChild(t);
+  }
+  let drag = false;
+  const at = e => {
+    const b = r.getBoundingClientRect(), pct = (e.clientX - b.left) / b.width * 100;
+    const side = pct < 50 ? 'L' : 'R', s = Math.max(1, Math.min(5, Math.round(Math.abs(pct - 50) / 9.2 + 0.5)));
+    if (S.side !== side || +$('#s-str').value !== s) { $('#s-str').value = s; setSide(side); }
+  };
+  r.addEventListener('pointerdown', e => { drag = true; r.classList.add('drag'); try { r.setPointerCapture(e.pointerId); } catch {} at(e); e.preventDefault(); });
+  r.addEventListener('pointermove', e => { if (drag) at(e); });
+  const end = () => { drag = false; r.classList.remove('drag'); };
+  r.addEventListener('pointerup', end); r.addEventListener('pointercancel', end);
+})();
 function updatePreview() {
   const v = +$('#s-str').value; $('#s-strv').textContent = v;
-  const x = S.side ? (S.side === 'L' ? 50 - v * 9 : 50 + v * 9) : 50;
-  $('#s-pm').style.left = x + '%'; $('#s-pm').style.opacity = S.side ? 1 : .25;
+  const tok = $('#s-tok');
+  tok.style.left = (S.side ? mX(S.side, v) : 50) + '%';
+  tok.className = 'tok ' + (S.side || 'unset');
+  tok.textContent = $('#s-text').value.trim() || '내 근거';
+  // 다시 놓기·옮기기일 때는 처음 자리를 점선 ○로 남긴다
+  const orig = S.me && S.me.cards.find(x => x.id === (S.from || S.editing));
+  $('#s-ghost').classList.toggle('hide', !orig); $('#s-ghost-note').classList.toggle('hide', !orig);
+  if (orig) $('#s-ghost').style.left = mX(orig.side, orig.strength) + '%';
   $('#s-send').disabled = !(S.side && $('#s-text').value.trim());
 }
-function resetForm() { $('#s-text').value = ''; $('#s-str').value = 3; setSide(null); S.editing = null; $('#s-form-title').textContent = '내 근거 보내기'; $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.add('hide'); }
+function resetForm() { $('#s-text').value = ''; $('#s-str').value = 3; S.editing = null; S.from = null; setSide(null); $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.add('hide'); }
 function startEdit(id) {
   const c = S.me.cards.find(x => x.id === id); if (!c) return;
-  S.editing = id; $('#s-text').value = c.text; $('#s-str').value = c.strength; setSide(c.side);
-  $('#s-form-title').textContent = '내 근거 다시 놓기'; $('#s-send').textContent = '다시 보내기'; $('#s-cancel-edit').classList.remove('hide');
+  S.editing = id; S.from = null; $('#s-text').value = c.text; $('#s-str').value = c.strength; setSide(c.side);
+  $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '다시 보내기'; $('#s-cancel-edit').classList.remove('hide');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function sendCard(c) {
   S.pending[c.id] = (S.pending[c.id] || 0) + 1;
-  send(S.ch, 'card', { id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev });
+  send(S.ch, 'card', { id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev, stage: stOf(c), from: c.from || null });
   setTimeout(() => { const cc = S.me.cards.find(x => x.id === c.id); if (cc && !cc.ok && S.pending[c.id] && S.pending[c.id] < 6) sendCard(cc); }, 3000);
 }
 function resendPending() { for (const c of S.me.cards) if (!c.ok) { S.pending[c.id] = 0; sendCard(c); } }
@@ -749,7 +949,7 @@ $('#s-send').onclick = () => {
   const text = $('#s-text').value.trim().slice(0, 60), strength = +$('#s-str').value; if (!text || !S.side) return;
   let c;
   if (S.editing) { c = S.me.cards.find(x => x.id === S.editing); Object.assign(c, { text, side: S.side, strength, rev: c.rev + 1, ok: false }); }
-  else { c = { id: uid(), text, side: S.side, strength, rev: 0, ok: false }; S.me.cards.push(c); }
+  else { c = { id: uid(), text, side: S.side, strength, rev: 0, ok: false, stage: curStage(), from: S.from || null }; S.me.cards.push(c); }
   saveMe(); resetForm(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('보냈어요');
 };
 $('#s-leave').onclick = () => { if (S.ch) client().removeChannel(S.ch); S.ch = null; history.replaceState(null, '', location.pathname); openJoin(''); };
@@ -762,7 +962,9 @@ $('#resume-btn').onclick = () => { const code = LS.get('tow:last'); T.g = LS.get
   const p = new URLSearchParams(location.search);
   const c = p.get('c'), t = p.get('t');
   if (c && /^\d{4}$/.test(c)) {
-    const me = LS.get(meKey(c));
+    // 같은 탭을 새로고침한 경우에만 자동으로 다시 들어간다(새 탭은 이름을 채운 채 확인만 받는다)
+    let nm = null; try { nm = sessionStorage.getItem(nameKey(c)); } catch {}
+    const me = nm && loadMe(c, nm);
     if (me?.name) { S.cfg = LS.get('tow:cfg:' + c); joinGame(c, me.name); if (S.cfg) enterStudent(); else openJoin(c); }
     else openJoin(c);
     return;
