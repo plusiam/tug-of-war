@@ -224,7 +224,7 @@ h2{font-size:20px;margin:0 0 12px}
     <span class="status"><span class="dot" id="b-dot"></span><span id="b-count">0</span>장</span>
     <div class="tools">
       <button id="t-names">이름 보이기</button>
-      <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요).">친구 근거 공유</button>
+      <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요)." aria-pressed="false">친구 근거: 꺼짐</button>
       <button id="t-whatif">그런데 만약에?</button>
       <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
       <button id="t-export">내보내기</button>
@@ -506,6 +506,8 @@ function renderBoard() {
   $('#b-l').textContent = '◀ ' + g.left; $('#b-r').textContent = g.right + ' ▶';
   $('#t-names').classList.toggle('on', g.showNames); $('#t-names').textContent = g.showNames ? '이름 숨기기' : '이름 보이기';
   $('#t-share').classList.toggle('on', g.share);
+  $('#t-share').textContent = g.share ? '친구 근거: 켜짐' : '친구 근거: 꺼짐';
+  $('#t-share').setAttribute('aria-pressed', String(!!g.share));
   const wf = g.whatif.at(-1);
   $('#b-whatif').classList.toggle('show', !!wf);
   $('#b-whatif').innerHTML = wf ? `그런데 만약에? ${esc(wf)}<small>처음 생각은 줄 위에 남고, 만약에 생각은 줄 아래에 놓여요</small>` : '';
@@ -808,7 +810,13 @@ function openSetup(editing) {
 }
 $('#b-code').onclick = showQR;
 $('#t-names').onclick = () => { T.g.showNames = !T.g.showNames; saveGame(); renderBoard(); };
-$('#t-share').onclick = () => { T.g.share = !T.g.share; saveGame(); renderBoard(); pushConfig(); toast(T.g.share ? '판에 근거 글이 보이고, 학생 화면에도 친구 근거(이름 없이)가 보여요' : '판에는 쪽·세기·쓴 사람만 보여요. 카드를 누르면 근거가 펼쳐져요'); };
+$('#t-share').onclick = () => {
+  T.g.share = !T.g.share;
+  // 공유를 끌 때 선택·연결 카드의 펼침도 함께 해제해 근거 글이 남지 않게 한다.
+  if (!T.g.share) T.sel.clear();
+  saveGame(); renderBoard(); pushConfig();
+  toast(T.g.share ? '판에 근거 글이 보이고, 학생 화면에도 친구 근거(이름 없이)가 보여요' : '근거 글을 접었어요. 판에는 쪽·세기·쓴 사람만 보여요. 카드를 누르면 그 근거만 펼쳐져요');
+};
 $('#t-whatif').onclick = askWhatif;
 $('#t-count').onclick = () => { T.g.showCount = !T.g.showCount; saveGame(); renderBoard(); };
 $('#t-export').onclick = exportMenu;
