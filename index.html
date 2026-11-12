@@ -80,8 +80,11 @@ h2{font-size:20px;margin:0 0 12px}
 .card.R{border-top-color:var(--R)}
 .card.sel{outline:3px solid #ffbf00;outline-offset:1px}
 .card.link{outline:3px dashed #e0a800;outline-offset:1px;opacity:1!important}
-.card.past{opacity:.55}
-.card.past:hover,.card.past.sel{opacity:1}
+/* 처음 생각은 흐리게: 투명도를 쓰면 겹쳐 쌓인 뒤 카드 글자가 비쳐 보여서 불투명 배경 + 연한 글자로 한다 */
+.card.past{background:#f4f5f8;color:#7d8696;box-shadow:0 1px 3px rgba(20,30,50,.10)}
+.card.past.L{border-top-color:#9db8ea} .card.past.R{border-top-color:#eeaa9c}
+.card.past .str i{opacity:.6}
+.card.past:hover,.card.past.sel,.card.past.link{background:var(--card);color:var(--ink)}
 .card.drag{cursor:grabbing;z-index:70!important;box-shadow:0 8px 18px rgba(20,30,50,.25)}
 .card.stk{box-shadow:0 -2px 6px rgba(20,30,50,.18),0 2px 6px rgba(20,30,50,.14)}
 .card:hover,.card.sel{z-index:60!important}
