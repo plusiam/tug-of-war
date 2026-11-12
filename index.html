@@ -85,6 +85,13 @@ h2{font-size:20px;margin:0 0 12px}
 .card.past.L{border-top-color:#9db8ea} .card.past.R{border-top-color:#eeaa9c}
 .card.past .str i{opacity:.6}
 .card.past:hover,.card.past.sel,.card.past.link{background:var(--card);color:var(--ink)}
+/* ‘그대로’ 만약에 카드: 글은 숨기고 세기 점과 ‘그대로’만. 누르면(선택) 원래 크기로 펼친다 */
+.card.mini{width:auto;min-width:0;padding:3px 8px;border-top-width:4px;box-shadow:0 1px 3px rgba(20,30,50,.12)}
+.card.mini .tx,.card.mini .tag,.card.mini .tag+br{display:none!important}
+.card.mini .meta{margin-top:0;flex-wrap:nowrap}
+.card.mini.sel,.card.mini.link{width:var(--cw,9%);min-width:110px;padding:7px 8px 6px;border-top-width:6px;z-index:60!important}
+.card.mini.sel .tx,.card.mini.link .tx{display:inline!important}
+.card.mini.sel .meta,.card.mini.link .meta{margin-top:4px;flex-wrap:wrap}
 .card.drag{cursor:grabbing;z-index:70!important;box-shadow:0 8px 18px rgba(20,30,50,.25)}
 .card.stk{box-shadow:0 -2px 6px rgba(20,30,50,.18),0 2px 6px rgba(20,30,50,.14)}
 .card:hover,.card.sel{z-index:60!important}
@@ -337,6 +344,8 @@ const stageOf = c => c.stage ?? c.phase ?? 0;
 function lastStage() { return allWhatifs().length; }
 function inputStage() { return T.g.whatif.length ? allWhatifs().length : 0; }
 function onBoard(c) { const st = stageOf(c); return !c.hidden && (st === 0 || st === lastStage()); }
+// 만약에 단계에서 처음 생각과 자리·세기가 같은 카드는 작은 표시로(누르면 펼쳐짐)
+const isMini = c => stageOf(c) > 0 && changeOf(c) === '그대로';
 function changeOf(c) {
   if (!stageOf(c)) return '';
   const par = c.from && T.g.cards.find(x => x.id === c.from);
@@ -421,8 +430,10 @@ function layout() {
   const vis = T.g.cards.filter(onBoard);
   for (const c of vis) {
     if (c.x != null) { pos[c.id] = { x: c.x, y: c.y }; continue; }
-    const up = stageOf(c) === 0;
-    const k = (up ? 't' : 'b') + c.side + c.strength; const n = slots[k] = (slots[k] ?? -1) + 1;
+    let up = stageOf(c) === 0;
+    const k = (up ? 't' : 'b') + c.side + c.strength; let n = slots[k] = (slots[k] ?? -1) + 1;
+    // 만약에 전에는 처음 생각이 판 전체(줄 위·아래 번갈아)를 쓴다
+    if (up && !lastStage()) { up = n % 2 === 0; n = Math.floor(n / 2); }
     const step = 78 * (T.g.fs || 1);
     const yPx = up ? H / 2 - 14 - step * (n + 1) : H / 2 + 14 + step * n;
     pos[c.id] = { x: colX(c.side, c.strength), y: Math.max(6, Math.min(97, yPx / H * 100)) };
@@ -476,7 +487,9 @@ function renderBoard() {
   const lb = $('#b-lane-bot');
   lb.className = 'lane bot' + (ls ? '' : ' wait');
   lb.innerHTML = ls ? `<b>만약에 생각</b><span>${esc(wfs[ls - 1])}</span>${older ? `<span style="font-size:13px;font-weight:600">앞선 만약에 카드 ${older}장은 내보내기에 남아 있어요</span>` : ''}`
-    : `<span>「그런데 만약에?」를 띄우면<br>만약에 생각이 여기(줄 아래)에 놓여요</span>`;
+    : '';
+  // 만약에 전에는 처음 생각이 판 전체를 쓰므로 위·아래 구분 글자를 감춘다
+  $('#b-lane-top').classList.toggle('hide', !ls); lb.classList.toggle('hide', !ls);
   board.querySelectorAll('.card,.scale').forEach(e => e.remove());
   for (let s = 1; s <= 5; s++) for (const side of ['L', 'R']) {
     const e = document.createElement('div'); e.className = 'scale'; e.style.left = colX(side, s) + '%'; e.textContent = scaleLabel(s); board.appendChild(e);
@@ -498,7 +511,7 @@ function renderBoard() {
   const pos = layout();
   vis.forEach(c => {
     const e = document.createElement('div');
-    e.className = 'card ' + c.side + (T.sel.has(c.id) ? ' sel' : '') + (linked.has(c.id) && !T.sel.has(c.id) ? ' link' : '') + (ls && stageOf(c) === 0 ? ' past' : '');
+    e.className = 'card ' + c.side + (T.sel.has(c.id) ? ' sel' : '') + (linked.has(c.id) && !T.sel.has(c.id) ? ' link' : '') + (ls && stageOf(c) === 0 ? ' past' : '') + (isMini(c) ? ' mini' : '');
     e.dataset.id = c.id;
     e.style.left = pos[c.id].x + '%'; e.style.top = pos[c.id].y + '%';
     const grp = c.group && g.groups[c.group];
@@ -522,6 +535,8 @@ function renderBoard() {
   const botLim = H - 6;
   const cols = {};
   vis.filter(c => c.x == null).forEach(c => (cols[(stageOf(c) ? 'b' : 't') + c.side + c.strength] ||= []).push(c));
+  // 줄 아래에서는 바뀜 생각·새 근거를 줄 가까이에, ‘그대로’ 작은 표시는 그 뒤에 둔다
+  for (const [k, list] of Object.entries(cols)) if (k[0] === 'b') list.sort((a, b) => isMini(a) - isMini(b));
   const place = (els, start, avail, dir) => { // dir -1: 줄 위로, +1: 줄 아래로
     if (!els.length) return;
     let hs = els.map(e => e.offsetHeight);
@@ -541,7 +556,10 @@ function renderBoard() {
   };
   for (const [k, list] of Object.entries(cols)) {
     const els = list.map(c => board.querySelector(`.card[data-id="${c.id}"]`)).filter(Boolean);
-    if (k[0] === 't') place(els, mid - 14, mid - 14 - topLim, -1);
+    if (k[0] === 't' && !ls) { // 만약에 전: 줄 위·아래 번갈아
+      place(els.filter((e, i) => i % 2 === 0), mid - 14, mid - 14 - topLim, -1);
+      place(els.filter((e, i) => i % 2 === 1), mid + 14, botLim - (mid + 14), 1);
+    } else if (k[0] === 't') place(els, mid - 14, mid - 14 - topLim, -1);
     else place(els, mid + 14, botLim - (mid + 14), 1);
   }
   // 묶음은 첫 카드 아래로 실제 높이만큼 이어 붙인다(화면 크기가 바뀌어도 겹치지 않게)
