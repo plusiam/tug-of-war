@@ -173,7 +173,7 @@ h2{font-size:20px;margin:0 0 12px}
 .friends button.on{background:#ffe3ec;border-color:#d6336c;color:#d6336c;font-weight:800}
 @media (max-width:520px){.ends,.bigbtns{grid-template-columns:1fr}.qrbox .bigcode{font-size:48px}}
 @media print{.topbar .tools,.selbar{display:none!important}}
-</style>
+.card.repositioned{box-shadow:inset 5px 0 #7c3aed}.card .moved{color:#6d28d9;background:#f3e8ff}.text-edit{color:#6b7280;font-size:12px}#links{pointer-events:none}#t-activate{font-weight:700}</style>
 </head>
 <body>
 
@@ -185,14 +185,14 @@ h2{font-size:20px;margin:0 0 12px}
     <button id="go-teacher" class="primary">선생님<br><span style="font-weight:500;font-size:15px">줄다리기 판 만들기</span></button>
     <button id="go-student">학생<br><span style="font-weight:500;font-size:15px">접속 코드로 들어가기</span></button>
   </div>
-  <div id="resume-box" class="panel hide" style="margin-top:16px">
+  <div class="row" style="margin-top:16px"><button id="home-saved">보관한 수업 목록</button><button id="home-import">저장한 수업 불러오기</button><button id="home-json">수업 저장(JSON)</button></div><div id="resume-box" class="panel hide" style="margin-top:16px">
     <div class="row" style="justify-content:space-between">
       <span>지난번 판 <b id="resume-code"></b> · <span id="resume-q" class="note"></span></span>
       <button id="resume-btn">이어서 열기</button>
     </div>
   </div>
   <div class="panel note" style="margin-top:16px">
-    🔒 학생이 보낸 근거는 서버에 저장하지 않아요. 실시간 통신으로 선생님 화면에 전달되고, 선생님 기기(브라우저)에만 남아요. 학생 이름 대신 번호나 별명을 쓰면 더 안전해요. 공용 기기에서는 활동 뒤 「새 판」으로 지워 주세요.
+    🔒 학생이 보낸 근거는 서버에 저장하지 않아요. 실시간 통신으로 선생님 화면에 전달되고, 선생님 기기(브라우저)에만 남아요. 학생 이름 대신 번호나 별명을 쓰면 더 안전해요. 공용 기기에서는 교사 비공개 JSON 백업 후 브라우저의 사이트 데이터를 지워 주세요. 새 질문판은 기존 기록을 지우지 않아요.
   </div>
   <p class="credit">룰루랄라 한기쌤</p>
 </section>
@@ -200,7 +200,7 @@ h2{font-size:20px;margin:0 0 12px}
 <!-- 교사 설정 화면 -->
 <section id="setup-view" class="wrap hide">
   <h1 id="setup-title">줄다리기 판 만들기</h1>
-  <p class="lead">질문과 양쪽 끝 이름을 정하면 학생 접속 코드가 만들어져요.</p>
+  <p class="lead" id="setup-lead">질문과 양쪽 끝 이름을 정하면 학생 접속 코드가 만들어져요.</p>
   <div class="panel">
     <div class="field"><label for="in-q">질문</label>
       <input type="text" id="in-q" maxlength="80" placeholder="예) 가젤은 사자를 용서해야 할까?"></div>
@@ -223,7 +223,7 @@ h2{font-size:20px;margin:0 0 12px}
     <span class="codechip" id="b-code" title="크게 보기">접속 코드 <b></b></span>
     <span class="status"><span class="dot" id="b-dot"></span><span id="b-count">0</span>장</span>
     <div class="tools">
-      <button id="t-names">이름 보이기</button>
+      <button id="t-boards">질문판 목록</button><button id="t-newboard">새 질문판</button><button id="t-activate">이 질문 시작</button><button id="t-resume">수업 재개</button><button id="t-json">수업 저장(JSON)</button><button id="t-import">저장한 수업 불러오기</button><button id="t-names">이름 보이기</button>
       <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요)." aria-pressed="false">친구 근거: 꺼짐</button>
       <button id="t-whatif">그런데 만약에?</button>
       <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
@@ -360,9 +360,39 @@ function modal(html, onMount) {
 }
 
 /* =================== 교사 =================== */
-const T = { g: null, ch: null, sel: new Set(), connected: false };
+const ROOM_VERSION = 4, APP_MARKER = 'thinking-tug-room';
+const T = { room: null, g: null, ch: null, sel: new Set(), connected: false, viewedBoardId: null };
 const gameKey = code => 'tow:game:' + code;
-function saveGame() { if (T.g) { LS.set(gameKey(T.g.code), T.g); LS.set('tow:last', T.g.code); } }
+const roomKey = id => 'tow:room:' + id;
+function boardNew(question, left, right, code) { return { id: uid(), code, question, left, right, cards: [], groups: {}, whatif: [], whatifArchive: [], showNames: false, showCount: false, share: false, fs: 1, created: Date.now() }; }
+function migrateGame(g) {
+ const b = JSON.parse(JSON.stringify(g)); b.id ||= uid(); b.whatifArchive ||= []; b.groups ||= {}; b.showCount = !!b.showCount; b.showNames=!!b.showNames; b.share=!!b.share; b.fs ||= 1;
+ b.whatif ||= []; b.cards ||= []; b.created ||= Date.now();
+ b.cards.forEach(c => { c.boardId = b.id; c.stage = stageOf(c); c.likes ||= []; c.hidden=!!c.hidden; c.rev ??= 0; c.name ??= ''; c.from ??= null; c.history ||= [{side:c.side,strength:c.strength,text:c.text,phase:c.stage,t:b.created}]; for(const axis of ['x','y']){if(c[axis]!==undefined){if(typeof c[axis]!=='number'||!Number.isFinite(c[axis]))delete c[axis];else c[axis]=Math.max(0,Math.min(100,c[axis]));}} });
+ return { schemaVersion: ROOM_VERSION, storageId: uid(), code: b.code, created: b.created, configSeq: 1, legacyBoardId: b.id, activeBoardId: b.id, boards: [b], offline: false };
+}
+function allStoredRooms() {
+ const out=[];
+ for(let i=0;i<localStorage.length;i++) {const k=localStorage.key(i); if(k.startsWith('tow:room:')) {const r=LS.get(k); if(r?.schemaVersion===ROOM_VERSION) out.push(r);} }
+ return out.sort((a,b)=>b.created-a.created);
+}
+function migrateStoredGames() {
+ const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('tow:game:'))keys.push(k);}
+ for(const k of keys){const g=LS.get(k);if(!g?.cards||allStoredRooms().some(r=>r.legacySource===k))continue; const r=migrateGame(g);r.legacySource=k;if(LS.get('tow:last')===g.code&&!LS.get('tow:lastRoom'))LS.set('tow:lastRoom',r.storageId);LS.set('tow:original:'+g.code,g);LS.set(roomKey(r.storageId),r);}
+}
+function saveGame() { if(T.room) { T.room.configSeq++; LS.set(roomKey(T.room.storageId),T.room); LS.set('tow:lastRoom',T.room.storageId); } }
+function viewBoard(id) {const b=T.room.boards.find(b=>b.id===id);if(!b)return;T.viewedBoardId=id;T.g=b;T.sel.clear();renderBoard();}
+function activeBoard() {return T.room?.boards.find(b=>b.id===T.room.activeBoardId);}
+function routeBoard(room,p) {return room.boards.find(b=>b.id===(p.boardId || room.legacyBoardId));}
+function openRoom(r) { if(T.ch)client().removeChannel(T.ch);T.ch=null;T.room=r;T.g=r.boards.find(b=>b.id===r.activeBoardId)||r.boards[0];T.viewedBoardId=T.g.id;T.sel.clear();history.replaceState(null,'','?room='+r.storageId);openBoard(); }
+function boardList() {
+ modal('<h2>질문판 목록</h2><p class="note">열람만으로 학생 질문은 바뀌지 않아요. 학생에게 보낼 판에서 「이 질문 시작」을 눌러 주세요.</p>'+T.room.boards.map((b,i)=>'<p><button data-board="'+b.id+'">'+(i+1)+'. '+esc(b.question)+'</button> '+(b.id===T.room.activeBoardId?'진행 중':'보관')+' · '+b.cards.length+'장</p>').join('')+'<div class="actions"><button data-new>새 질문판</button><button data-close>닫기</button></div>',(ov,close)=>{ov.querySelectorAll('[data-board]').forEach(e=>e.onclick=()=>{viewBoard(e.dataset.board);close();});ov.querySelector('[data-new]').onclick=()=>{close();openSetup('new');};ov.querySelector('[data-close]').onclick=close;});
+}
+function savedRooms() {migrateStoredGames();const rooms=allStoredRooms();modal('<h2>보관한 수업</h2>'+rooms.map(r=>'<p><button data-room="'+r.storageId+'">'+esc(r.boards[0]?.question)+' · '+r.boards.length+'판 · '+new Date(r.created).toLocaleDateString('ko-KR')+'</button></p>').join('')+'<button data-close>닫기</button>',(ov,close)=>{ov.querySelectorAll('[data-room]').forEach(e=>e.onclick=()=>{close();const r=rooms.find(r=>r.storageId===e.dataset.room);openRoom(r);});ov.querySelector('[data-close]').onclick=close;});}
+async function freshCode() {for(let i=0;i<12;i++){const code=String(1000+Math.floor(Math.random()*9000));if(LS.get(gameKey(code))||allStoredRooms().some(r=>r.code===code))continue;if(!(await codeTaken(code)))return code;}throw Error('빈 코드를 찾지 못했어요. 잠시 뒤 다시 시도해 주세요.');}
+async function resumeRoom() {try {const code=await freshCode();T.room.code=code;T.room.offline=false;T.room.boards.forEach(b=>b.code=code);saveGame();openBoard();showQR();}catch(e){toast(e.message);}}
+function activateViewed() {if(T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');T.room.activeBoardId=T.viewedBoardId;saveGame();pushConfig();renderBoard();}
+
 /* 단계(stage): 0 = 처음 생각(줄 위), k = k번째 「그런데 만약에?」 뒤 만약에 생각(줄 아래, 마지막 단계만 판에 보임) */
 const stageOf = c => c.stage ?? c.phase ?? 0;
 function lastStage() { return allWhatifs().length; }
@@ -376,15 +406,16 @@ function changeOf(c) {
   return !par ? '새 근거' : par.side !== c.side ? '쪽 바뀜' : par.strength !== c.strength ? '세기 바뀜' : '그대로';
 }
 function cfgPayload() {
-  const g = T.g;
-  return { question: g.question, left: g.left, right: g.right, whatif: g.whatif.at(-1) || null, share: g.share, stage: inputStage(),
-    board: g.share ? g.cards.filter(c => !c.hidden).map(c => ({ id: c.id, text: c.text, side: c.side, strength: c.strength, stage: stageOf(c), likes: (c.likes || []).length })) : null };
+ const g=activeBoard();if(!g)return null;
+ const gate=g.id!==T.room.legacyBoardId, notice='새 질문판이 시작됐어요. 페이지를 새로고침해 주세요.';
+ return { boardId:g.id, legacyBoardId:T.room.legacyBoardId, configSeq:T.room.configSeq, roomId:T.room.storageId, contentV4:{question:g.question,left:g.left,right:g.right,whatif:g.whatif.at(-1)||null},question:gate?notice:g.question,left:gate?'새로고침 필요':g.left,right:gate?'새로고침 필요':g.right,whatif:gate?notice:g.whatif.at(-1)||null,share:g.share,stage:g.whatif.length?(g.whatifArchive.length+g.whatif.length):0,
+ board:g.share?g.cards.filter(c=>!c.hidden).map(c=>({boardId:g.id,id:c.id,text:c.text,side:c.side,strength:c.strength,stage:stageOf(c),likes:(c.likes||[]).length})):null };
 }
-let cfgTimer = null, boardTimer = null, boardLast = 0;
-function pushConfig() { clearTimeout(cfgTimer); cfgTimer = setTimeout(() => { if (!T.g) return; boardLast = Date.now(); sendTo(topicAll(T.g.code), 'config', cfgPayload()); }, 150); }
-// 친구 근거 공유 중 카드·공감이 들어올 때: 학생 화면의 친구 근거 목록은 4초에 한 번만 새로 보낸다(인원이 많아도 한도를 넘지 않게)
-function pushBoardSoon() { if (!T.g || !T.g.share || boardTimer) return; boardTimer = setTimeout(() => { boardTimer = null; pushConfig(); }, Math.max(300, 4000 - (Date.now() - boardLast))); }
-function ackTo(p, rev) { const sid = cleanSid(p.sid); if (sid && T.g) sendTo(topicMe(T.g.code, sid), 'ack', { id: p.id, rev }); }
+let cfgTimer=null, boardTimer=null, boardLast=0;
+function pushConfig(){clearTimeout(cfgTimer);cfgTimer=setTimeout(()=>{if(!T.room||T.room.offline)return;boardLast=Date.now();sendTo(topicAll(T.room.code),'config',cfgPayload());},150);}
+function pushBoardSoon(){if(!activeBoard()?.share||boardTimer)return;boardTimer=setTimeout(()=>{boardTimer=null;pushConfig();},Math.max(300,4000-(Date.now()-boardLast)));}
+function ackTo(p,rev,boardId){const sid=cleanSid(p.sid);if(sid&&T.room)sendTo(topicMe(T.room.code,sid),'ack',{id:p.id,rev,boardId,configSeq:T.room.configSeq});}
+
 
 async function codeTaken(code) {
   return new Promise(resolve => {
@@ -396,59 +427,30 @@ async function codeTaken(code) {
     setTimeout(() => fin(false), 2200);
   });
 }
-async function createGame(question, left, right) {
-  let code = '';
-  for (let i = 0; i < 5; i++) {
-    code = String(1000 + Math.floor(Math.random() * 9000));
-    if (LS.get(gameKey(code))) continue;
-    if (!(await codeTaken(code))) break;
-  }
-  T.g = { code, question, left, right, cards: [], groups: {}, whatif: [], showNames: false, share: false, fs: 1, created: Date.now() };
-  saveGame();
-  history.replaceState(null, '', '?t=' + code);
-  openBoard();
-  showQR();
+async function createGame(question,left,right){try{const code=await freshCode();const b=boardNew(question,left,right,code);T.room={schemaVersion:ROOM_VERSION,storageId:uid(),code,created:Date.now(),configSeq:1,legacyBoardId:b.id,activeBoardId:b.id,boards:[b],offline:false};T.g=b;T.viewedBoardId=b.id;saveGame();openRoom(T.room);showQR();}catch(e){toast(e.message);}}
+function openBoard(){
+ show('board-view');document.title='생각 줄다리기 · '+T.room.code;
+ if(!T.ch&&!T.room.offline){T.ch=openChannel(topicIn(T.room.code),{
+ hello:p=>{const sid=cleanSid(p.sid);if(sid)sendTo(topicMe(T.room.code,sid),'config',cfgPayload());if(sid&&!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,sid),'refresh',{message:'새 질문판이 시작됐어요. 이 페이지를 새로고침해 주세요.'});},
+ card:onCard,like:onLike
+ },st=>{T.connected=st==='SUBSCRIBED';$('#b-dot').classList.toggle('on',T.connected);if(T.connected)pushConfig();});}
+ renderBoard();
 }
-function openBoard() {
-  show('board-view');
-  document.title = '생각 줄다리기 · ' + T.g.code;
-  if (T.ch) client().removeChannel(T.ch);
-  T.ch = openChannel(topicIn(T.g.code), {
-    hello: p => { const sid = cleanSid(p.sid); if (sid && T.g) sendTo(topicMe(T.g.code, sid), 'config', cfgPayload()); },
-    card: p => onCard(p),
-    like: p => onLike(p),
-  }, st => { T.connected = st === 'SUBSCRIBED'; $('#b-dot').classList.toggle('on', T.connected); if (T.connected) pushConfig(); });
-  renderBoard();
+function acceptCard(room,p,now=Date.now()) {
+ const b=routeBoard(room,p);if(!b||!safeId(p.id)||!safeId(p.sid)||!['L','R'].includes(p.side)||!Number.isInteger(p.strength)||p.strength<1||p.strength>5||typeof p.text!=='string'||!p.text.trim()||p.text.length>60||!Number.isSafeInteger(p.rev)||p.rev<0)return null;
+ const stage=p.stage??0;if(!Number.isInteger(stage)||stage<0||stage>b.whatifArchive.length+b.whatif.length)return null;
+ if(room.boards.some(other=>other.id!==b.id&&other.cards.some(c=>c.id===p.id)))return null;
+ let c=b.cards.find(x=>x.id===p.id);if(c&&(c.sid!==p.sid||stageOf(c)!==stage))return null;
+ if(c&&c.rev>=p.rev)return {board:b,card:c,changed:false};
+ const text=p.text, name=String(p.name||'').slice(0,12);
+ if(c){const moved=c.side!==p.side||c.strength!==p.strength;if(moved||c.text!==text)c.history.push({side:p.side,strength:p.strength,text,phase:stage,t:now});Object.assign(c,{side:p.side,strength:p.strength,text,name,rev:p.rev});if(moved&&!c.group){delete c.x;delete c.y;}}
+ else{const parent=p.from&&b.cards.find(c=>c.id===p.from&&c.sid===p.sid&&stageOf(c)===0);c={id:p.id,boardId:b.id,sid:p.sid,name,text,side:p.side,strength:p.strength,rev:p.rev,phase:stage,stage,from:parent?.id||null,likes:[],hidden:false,history:[{side:p.side,strength:p.strength,text,phase:stage,t:now}]};b.cards.push(c);}
+ return {board:b,card:c,changed:true};
 }
-function onCard(p) {
-  if (!p.id || !p.text || !['L', 'R'].includes(p.side)) return;
-  const s = Math.max(1, Math.min(5, parseInt(p.strength) || 3));
-  const text = String(p.text).slice(0, 60), name = String(p.name || '').slice(0, 12);
-  const phase = inputStage();
-  const stage = Number.isInteger(p.stage) ? Math.max(0, Math.min(lastStage(), p.stage)) : phase;
-  let c = T.g.cards.find(x => x.id === p.id);
-  if (c) {
-    if (c.rev >= (p.rev || 0)) { ackTo(p, c.rev); return; }
-    const posChanged = c.side !== p.side || c.strength !== s;
-    if (posChanged || c.text !== text) c.history.push({ side: p.side, strength: s, text, phase, t: Date.now() });
-    Object.assign(c, { side: p.side, strength: s, text, name, rev: p.rev || 0 });
-    // 학생이 위치를 바꾸면 새 칸으로 다시 놓는다(교사가 묶은 카드는 그대로)
-    if (posChanged && !c.group) { delete c.x; delete c.y; }
-  } else {
-    const from = p.from && T.g.cards.some(x => x.id === p.from) ? p.from : null;
-    c = { id: p.id, sid: p.sid, name, text, side: p.side, strength: s, rev: p.rev || 0, phase: stage, stage, from, likes: [], hidden: false,
-      history: [{ side: p.side, strength: s, text, phase, t: Date.now() }] };
-    T.g.cards.push(c);
-  }
-  saveGame(); renderBoard(); ackTo(p, c.rev); pushBoardSoon();
-}
-function onLike(p) {
-  const c = T.g.cards.find(x => x.id === p.id); if (!c || !p.sid) return;
-  c.likes = c.likes || [];
-  const i = c.likes.indexOf(p.sid);
-  if (p.on && i < 0) c.likes.push(p.sid); else if (!p.on && i >= 0) c.likes.splice(i, 1);
-  saveGame(); renderBoard(); pushBoardSoon();
-}
+function onCard(p){if(T.room?.offline)return;const r=acceptCard(T.room,p);if(!r)return;if(!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,p.sid),'refresh',{message:'새 질문판이 시작됐어요. 새로고침해 주세요.'});if(r.changed){saveGame();if(r.board.id===T.viewedBoardId)renderBoard();}ackTo(p,r.card.rev,r.board.id);if(r.board.id===T.room.activeBoardId)pushBoardSoon();}
+function onLike(p){if(T.room?.offline)return;const b=routeBoard(T.room,p),c=b?.cards.find(c=>c.id===p.id);if(!c||!safeId(p.sid)||typeof p.on!=='boolean')return;const i=c.likes.indexOf(p.sid);if(p.on&&i<0)c.likes.push(p.sid);else if(!p.on&&i>=0)c.likes.splice(i,1);saveGame();if(b.id===T.viewedBoardId)renderBoard();if(b.id===T.room.activeBoardId)pushBoardSoon();}
+function movement(c){let moved=false,edited=false;for(let i=1;i<c.history.length;i++){const a=c.history[i-1],b=c.history[i];if(a.side!==b.side||a.strength!==b.strength)moved=true;else if(a.text!==b.text)edited=true;}return {moved,edited,returned:moved&&c.history[0].side===c.side&&c.history[0].strength===c.strength};}
+
 const colX = (side, s) => side === 'L' ? 50 - (s - 0.5) * 9.4 : 50 + (s - 0.5) * 9.4;
 const scaleLabel = s => s === 1 ? '1 살짝' : s === 3 ? '3 보통' : s === 5 ? '5 아주 세게' : String(s);
 function layout() {
@@ -500,9 +502,10 @@ function renderCounts() {
 function renderBoard() {
   const g = T.g; if (!g) return;
   const board = $('#board');
+  $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
-  $('#b-q').textContent = g.question;
-  $('#b-code b').textContent = g.code;
+  $('#b-q').textContent = (T.room.offline?'[오프라인 보관] ':T.viewedBoardId!==T.room.activeBoardId?'[보관판 열람] ':'') + g.question;
+  $('#b-code b').textContent = T.room.offline ? '오프라인' : g.code;
   $('#b-l').textContent = '◀ ' + g.left; $('#b-r').textContent = g.right + ' ▶';
   $('#t-names').classList.toggle('on', g.showNames); $('#t-names').textContent = g.showNames ? '이름 숨기기' : '이름 보이기';
   $('#t-share').classList.toggle('on', g.share);
@@ -547,13 +550,14 @@ function renderBoard() {
     const grp = c.group && g.groups[c.group];
     if (grp) e.style.borderColor = grp.color, e.style.borderTopColor = c.side === 'L' ? 'var(--L)' : 'var(--R)';
     const strDots = '<i>' + '●'.repeat(c.strength) + '</i>' + '○'.repeat(5 - c.strength);
-    const moved = c.history.length > 1 && (c.history[0].side !== c.side || c.history[0].strength !== c.strength);
+    const mark = movement(c), moved = mark.moved; if(moved)e.classList.add('repositioned');
     const chg = changeOf(c), chgCls = { '그대로': 'same', '세기 바뀜': 'str', '쪽 바뀜': 'side', '새 근거': 'new' }[chg];
     e.innerHTML = (grp ? `<span class="tag" style="background:${grp.color}">${esc(grp.label || '묶음')}</span><br>` : '') +
       `<span class="tx">${esc(c.text)}</span>` +
       `<div class="meta"><span class="who">${esc(c.name || '익명')}</span><span class="str">${strDots}</span>` +
       (chg ? `<span class="chg ${chgCls}">${chg}</span>` : '') +
-      (moved ? `<span class="moved" title="처음 보낸 자리: ${c.history[0].side === 'L' ? esc(g.left) : esc(g.right)} ${c.history[0].strength}">↔ 다시 놓음</span>` : '') +
+      (moved ? `<span class="moved" title="처음 보낸 자리: ${c.history[0].side === 'L' ? esc(g.left) : esc(g.right)} ${c.history[0].strength}">↔ ${mark.returned ? '원래 자리로 돌아옴' : '다시 놓음'}</span>` : '') +
+      (!moved && mark.edited ? '<span class="text-edit">✎ 근거 수정</span>' : '') +
       ((c.likes || []).length ? `<span class="likes">♥${c.likes.length}</span>` : '') +
       (g.showNames && c.name ? `<span class="nm">${esc(c.name)}</span>` : '') + '</div>';
     board.appendChild(e);
@@ -598,7 +602,7 @@ function renderBoard() {
     let yPx = null;
     for (const c of mem) {
       const el = board.querySelector(`.card[data-id="${c.id}"]`); if (!el) continue;
-      if (yPx === null) yPx = c.y / 100 * H; else { c.y = yPx / H * 100; c.x = mem[0].x; el.style.left = c.x + '%'; el.style.top = c.y + '%'; }
+      if (yPx === null) yPx = c.y / 100 * H; else { c.y = Math.max(0,Math.min(96,yPx / H * 100)); c.x = mem[0].x; el.style.left = c.x + '%'; el.style.top = c.y + '%'; }
       yPx += el.offsetHeight + 10;
     }
   }
@@ -606,7 +610,7 @@ function renderBoard() {
   updateSelbar();
 }
 function drawLinks(board, pairs) {
-  const svg = $('#links'); svg.innerHTML = ''; if (!pairs.length) return;
+  const svg = $('#links'); svg.innerHTML = ''; if (!pairs.length) {drawHistoryGhosts(board,svg);return;}
   const br = board.getBoundingClientRect(); const seen = new Set();
   let h = '<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e0a800"/></marker></defs>';
   for (const [a, b] of pairs) {
@@ -622,7 +626,9 @@ function drawLinks(board, pairs) {
     h += `<path d="M${x1},${y1} L${x2},${y2}" fill="none" stroke="#e0a800" stroke-width="4" stroke-dasharray="9 6" stroke-linecap="round" marker-end="url(#ah)"/>`;
   }
   svg.innerHTML = h;
+  drawHistoryGhosts(board,svg);
 }
+function drawHistoryGhosts(board,svg) {const w=board.clientWidth,h=board.clientHeight;for(const id of T.sel){const c=T.g.cards.find(c=>c.id===id);if(!c||!movement(c).moved)continue;const states=c.history.filter((s,i,a)=>!i||s.side!==a[i-1].side||s.strength!==a[i-1].strength),y=(lastStage()?(stageOf(c)?.7:.3):.45)*h;let prev=null;states.forEach((s,i)=>{const x=colX(s.side,s.strength)*w/100;if(prev!==null)svg.innerHTML+='<path d="M'+prev+','+y+' L'+x+','+y+'" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 4" fill="none"/>';if(i<states.length-1)svg.innerHTML+='<circle cx="'+x+'" cy="'+y+'" r="14" fill="white" fill-opacity=".5" stroke="#7c3aed" stroke-width="3"/><text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" fill="#7c3aed" font-size="11">'+(i+1)+'</text>';prev=x;});}}
 function updateSelbar() {
   for (const id of [...T.sel]) if (!T.g.cards.some(c => c.id === id && onBoard(c))) T.sel.delete(id);
   $('#selbar').classList.toggle('hide', T.sel.size === 0);
@@ -779,36 +785,38 @@ function moreMenu() {
       <button data-a="edit">질문·양 끝 이름 고치기</button>
       <button data-a="auto">모든 카드 제자리로 (묶음 풀기)</button>
       <button data-a="unhide" ${hidden ? '' : 'disabled'}>숨긴 카드 다시 보이기 (${hidden}장)</button>
-      <button data-a="new">새 판 만들기 (이 판 기록 지우기)</button>
+      <button data-a="new">새 질문판 만들기 (기록 유지)</button><button data-a="saved">보관한 수업 목록</button>
     </div><div class="actions"><button class="primary" data-a="close">닫기</button></div>`, (ov, close) => {
     ov.querySelector('[data-a=close]').onclick = close;
     ov.querySelector('[data-a=edit]').onclick = () => { close(); openSetup(true); };
     ov.querySelector('[data-a=auto]').onclick = () => { T.g.cards.forEach(c => { delete c.x; delete c.y; delete c.group; }); T.g.groups = {}; saveGame(); renderBoard(); close(); };
     ov.querySelector('[data-a=unhide]').onclick = () => { T.g.cards.forEach(c => c.hidden = false); saveGame(); renderBoard(); pushConfig(); close(); };
-    ov.querySelector('[data-a=new]').onclick = () => {
-      if (!confirm('이 판의 카드와 기록을 이 기기에서 지울까요? 필요하면 먼저 내보내기로 저장해 주세요.')) return;
-      LS.del(gameKey(T.g.code)); LS.del('tow:last'); if (T.ch) client().removeChannel(T.ch); T.ch = null; T.g = null; close();
-      history.replaceState(null, '', location.pathname); openSetup(false);
-    };
+    ov.querySelector('[data-a=new]').onclick=()=>{close();openSetup('new');};
+    ov.querySelector('[data-a=saved]').onclick=()=>{close();savedRooms();};
+
   });
 }
 function openSetup(editing) {
   show('setup-view');
+  const newBoard=editing==='new'; editing=editing===true;
+  $('#setup-lead').textContent=newBoard?'같은 접속 코드에 질문판을 추가해요. 추가만으로 학생 화면은 바뀌지 않아요.':editing?'이 질문판의 질문과 양쪽 끝 이름을 고쳐요. 진행 중인 질문판을 고치면 학생 화면에도 반영돼요.':'질문과 양쪽 끝 이름을 정하면 학생 접속 코드가 만들어져요.';
   $('#setup-title').textContent = editing ? '질문·양 끝 이름 고치기' : '줄다리기 판 만들기';
   $('#setup-go').textContent = editing ? '고치기' : '판 만들기';
-  $('#setup-cancel').classList.toggle('hide', !editing);
+  $('#setup-cancel').classList.toggle('hide', !editing && !newBoard); if(newBoard){$('#setup-title').textContent='새 질문판 만들기';$('#setup-go').textContent='질문판 추가 (학생 화면 유지)';}
   if (editing) { $('#in-q').value = T.g.question; $('#in-l').value = T.g.left; $('#in-r').value = T.g.right; }
   else { $('#in-q').value = ''; $('#in-l').value = ''; $('#in-r').value = ''; }
   $('#setup-go').onclick = async () => {
     const q = $('#in-q').value.trim(), l = $('#in-l').value.trim(), r = $('#in-r').value.trim();
     if (!q || !l || !r) return toast('질문과 양쪽 끝 이름을 모두 적어 주세요');
-    if (editing) { Object.assign(T.g, { question: q, left: l, right: r }); saveGame(); openBoard(); return; }
+    if (editing) { Object.assign(T.g, { question: q, left: l, right: r }); saveGame(); openBoard(); pushConfig(); return; }
+    if(newBoard){const b=boardNew(q,l,r,T.room.code);T.room.boards.push(b);saveGame();T.g=b;T.viewedBoardId=b.id;T.sel.clear();openBoard();return;}
     $('#setup-go').disabled = true; $('#setup-go').textContent = '코드 만드는 중…';
     try { await createGame(q, l, r); } finally { $('#setup-go').disabled = false; }
   };
   $('#setup-cancel').onclick = () => openBoard();
 }
-$('#b-code').onclick = showQR;
+$('#b-code').onclick = ()=>T.room.offline?toast('보관 사본입니다. 수업 재개로 새 코드를 만드세요.'):showQR();
+$('#t-boards').onclick=boardList;$('#t-newboard').onclick=()=>openSetup('new');$('#t-activate').onclick=activateViewed;$('#t-resume').onclick=resumeRoom;$('#t-json').onclick=exportRoom;$('#t-import').onclick=importRoom;$('#home-saved').onclick=savedRooms;$('#home-import').onclick=importRoom;$('#home-json').onclick=()=>{if(!T.room){const r=allStoredRooms()[0];if(!r)return toast('보관한 수업이 없어요');T.room=r;T.g=r.boards[0];}exportRoom();};
 $('#t-names').onclick = () => { T.g.showNames = !T.g.showNames; saveGame(); renderBoard(); };
 $('#t-share').onclick = () => {
   T.g.share = !T.g.share;
@@ -830,8 +838,36 @@ $('#s-hide').onclick = () => { T.sel.forEach(id => { const c = T.g.cards.find(z 
 $('#s-clear').onclick = () => { T.sel.clear(); renderBoard(); };
 window.addEventListener('resize', () => { if (T.g && !$('#board-view').classList.contains('hide')) renderBoard(); });
 
+/* Teacher-private, versioned full-fidelity JSON. Validation completes before any write. */
+const safeId = v => typeof v==='string' && /^[A-Za-z0-9_-]{1,80}$/.test(v) && !['__proto__','constructor','prototype'].includes(v);
+function validateBackup(raw) {
+ const fail=m=>{throw Error('수업 파일 오류: '+m);};
+ function obj(o,keys){if(!o||typeof o!=='object'||Array.isArray(o)||Object.getPrototypeOf(o)!==Object.prototype)fail('객체 형식');for(const k of Object.keys(o))if(!keys.includes(k)||['__proto__','constructor','prototype'].includes(k))fail('허용되지 않은 필드 '+k);}
+ const str=(v,n)=>{if(typeof v!=='string'||v.length>n)fail('문자열 길이');};
+ const num=(v,a,b)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<a||v>b)fail('숫자 범위');};
+ const integer=(v,a,b)=>{num(v,a,b);if(!Number.isSafeInteger(v))fail('정수');};
+ const id=v=>{if(!safeId(v))fail('식별자');};
+ const bool=v=>{if(typeof v!=='boolean')fail('켜짐/꺼짐 값');};
+ const arr=(v,n)=>{if(!Array.isArray(v)||v.length>n)fail('목록 크기');};
+ const date=v=>integer(v,0,Date.now()+86400000);
+ obj(raw,['app','schemaVersion','exportedAt','room']);if(raw.app!==APP_MARKER||raw.schemaVersion!==ROOM_VERSION)fail('지원하지 않는 형식/버전');if(typeof raw.exportedAt!=='string'||!/^\d{4}-\d\d-\d\dT/.test(raw.exportedAt)||!Number.isFinite(Date.parse(raw.exportedAt))||new Date(raw.exportedAt).toISOString()!==raw.exportedAt)fail('내보낸 날짜');
+ const r=raw.room;obj(r,['schemaVersion','storageId','code','created','configSeq','legacyBoardId','activeBoardId','boards','offline','legacySource']);if(r.schemaVersion!==ROOM_VERSION)fail('수업 버전');id(r.storageId);if(typeof r.code!=='string'||!/^\d{4}$/.test(r.code))fail('접속 코드');date(r.created);integer(r.configSeq,0,Number.MAX_SAFE_INTEGER-1000);id(r.legacyBoardId);id(r.activeBoardId);bool(r.offline);if(r.legacySource!==undefined){str(r.legacySource,40);if(!/^tow:game:\d{4}$/.test(r.legacySource))fail('이관 출처');}arr(r.boards,200);if(!r.boards.length)fail('빈 수업');
+ const bids=new Set(),cardIds=new Set();let total=0;
+ for(const b of r.boards){obj(b,['id','code','question','left','right','cards','groups','whatif','whatifArchive','showNames','showCount','share','fs','created']);id(b.id);if(bids.has(b.id))fail('중복 질문판');bids.add(b.id);if(b.code!==r.code)fail('코드 불일치');str(b.question,80);str(b.left,24);str(b.right,24);if(!b.question.trim()||!b.left.trim()||!b.right.trim())fail('빈 질문');date(b.created);bool(b.showNames);bool(b.showCount);bool(b.share);num(b.fs,.7,1.8);arr(b.whatif,500);arr(b.whatifArchive,500);[...b.whatif,...b.whatifArchive].forEach(w=>str(w,60));const maxStage=b.whatif.length+b.whatifArchive.length;
+ if(!b.groups||typeof b.groups!=='object'||Array.isArray(b.groups)||Object.getPrototypeOf(b.groups)!==Object.prototype)fail('묶음');if(Object.keys(b.groups).length>5000)fail('묶음 크기');for(const [gid,g]of Object.entries(b.groups)){id(gid);obj(g,['label','color']);str(g.label,16);if(typeof g.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(g.color))fail('묶음 색');}
+ arr(b.cards,20000);total+=b.cards.length;if(total>30000)fail('전체 카드 수');const localIds=new Set(b.cards.map(c=>c.id));
+ for(const c of b.cards){obj(c,['id','boardId','sid','name','text','side','strength','rev','phase','stage','from','likes','hidden','history','x','y','group']);id(c.id);id(c.sid);if(c.boardId!==b.id||cardIds.has(c.id))fail('카드 식별자 중복/질문판');cardIds.add(c.id);str(c.name,12);str(c.text,60);if(!['L','R'].includes(c.side))fail('쪽');integer(c.strength,1,5);integer(c.rev,0,Number.MAX_SAFE_INTEGER-1000);integer(c.stage,0,maxStage);if(c.phase!==undefined)integer(c.phase,0,maxStage);bool(c.hidden);if(c.from!==null&&c.from!==undefined){id(c.from);if(!localIds.has(c.from)||c.from===c.id)fail('이전 카드 참조');const p=b.cards.find(p=>p.id===c.from);if(p.sid!==c.sid||p.stage!==0||c.stage===0)fail('처음 생각 연결');}
+ if(c.group!==undefined){id(c.group);if(!Object.hasOwn(b.groups,c.group))fail('묶음 참조');}if(c.x!==undefined)num(c.x,0,100);if(c.y!==undefined)num(c.y,0,100);
+ arr(c.likes,5000);const likes=new Set();c.likes.forEach(s=>{id(s);if(likes.has(s))fail('공감 중복');likes.add(s);});arr(c.history,5000);if(!c.history.length)fail('빈 이력');let prev=-1;for(const h of c.history){obj(h,['side','strength','text','phase','stage','t']);if(!['L','R'].includes(h.side))fail('이력 쪽');integer(h.strength,1,5);str(h.text,60);if(h.phase!==undefined)integer(h.phase,0,maxStage);if(h.stage!==undefined)integer(h.stage,0,maxStage);date(h.t);if(h.t<prev)fail('이력 날짜 순서');prev=h.t;}const last=c.history.at(-1);if(last.side!==c.side||last.strength!==c.strength||last.text!==c.text)fail('현재 카드와 이력 불일치');}
+ }
+ if(!bids.has(r.activeBoardId)||!bids.has(r.legacyBoardId))fail('활성 질문판 참조');return JSON.parse(JSON.stringify(r));
+}
+function backupObject(room){return {app:APP_MARKER,schemaVersion:ROOM_VERSION,exportedAt:new Date().toISOString(),room:JSON.parse(JSON.stringify(room))};}
+function exportRoom(){modal('<h2>수업 저장(JSON)</h2><p>교사 개인 보관용입니다. 이름 표시가 꺼져 있어도 모든 학생 이름·숨긴 카드·모든 질문판과 수정 기록이 포함됩니다. 학생이나 공개 게시판에 공유하지 마세요.</p><div class="actions"><button data-close>취소</button><button data-save class="primary">비공개 백업 저장</button></div>',(ov,close)=>{ov.querySelector('[data-close]').onclick=close;ov.querySelector('[data-save]').onclick=()=>{download(fileBase()+'_교사비공개.json',new Blob([JSON.stringify(backupObject(T.room),null,2)],{type:'application/json'}));close();};});}
+function importRoom(){modal('<h2>저장한 수업 불러오기</h2><p class="note">JSON만, 최대 10MB. 원본을 덮어쓰지 않고 별도 보관 사본으로 열어요. 재개 전에는 오프라인 열람입니다.</p><label for="room-file">교사 수업 백업 파일 선택</label><input id="room-file" type="file" accept=".json,application/json"><p role="status" data-status></p><div class="actions"><button data-close>닫기</button><button data-import disabled>별도 사본으로 열기</button></div>',(ov,close)=>{let candidate=null;const status=ov.querySelector('[data-status]'),go=ov.querySelector('[data-import]');ov.querySelector('[data-close]').onclick=close;ov.querySelector('#room-file').onchange=async e=>{candidate=null;go.disabled=true;try{const file=e.target.files[0];if(!file)return;if(file.size>10*1024*1024)throw Error('10MB보다 큰 파일입니다.');const raw=JSON.parse(await file.text());candidate=validateBackup(raw);status.textContent='질문: '+candidate.boards.slice(0,3).map((b,i)=>(i+1)+'. '+b.question).join(' / ')+(candidate.boards.length>3?' 외 '+(candidate.boards.length-3)+'개':'')+' · '+candidate.boards.length+'개 질문판 · '+candidate.boards.reduce((n,b)=>n+b.cards.length,0)+'장 · 저장 '+new Date(raw.exportedAt).toLocaleString('ko-KR')+' · 이름과 숨긴 기록을 포함한 교사 비공개 백업입니다.';go.disabled=false;}catch(err){status.textContent=err.message;}};go.onclick=()=>{if(!candidate)return;candidate.storageId=uid();candidate.offline=true;delete candidate.legacySource;LS.set(roomKey(candidate.storageId),candidate);openRoom(candidate);close();};});}
+
 /* =================== 학생 =================== */
-const S = { code: '', me: null, cfg: null, chs: [], joinId: null, side: null, editing: null, from: null, pending: {}, connected: false };
+const S = { restoring:false, code: '', me: null, cfg: null, chs: [], joinId: null, side: null, editing: null, from: null, pending: {}, connected: false };
 // 학생 기록은 코드+이름별로 저장한다(한 기기에서 여러 학생이 들어가도 섞이지 않게). 탭마다 마지막 이름은 sessionStorage에.
 const meKey = (code, name) => 'tow:me:' + code + ':' + name;
 const nameKey = code => 'tow:name:' + code;
@@ -855,27 +891,38 @@ $('#j-go').onclick = () => {
 };
 $('#j-name').onkeydown = e => { if (e.key === 'Enter') $('#j-go').click(); };
 function joinGame(code, name) {
-  S.code = code;
+  S.code = code; S.cfg=null;
   S.me = loadMe(code, name) || { sid: uid(), cards: [], likes: [] };
   S.me.name = name; saveMe();
   history.replaceState(null, '', '?c=' + code);
   $('#j-msg').textContent = '선생님 화면을 찾는 중…'; $('#j-go').disabled = true;
   leaveChannels();
   const joinId = S.joinId = uid(); let found = false, tries = 0;
-  const hello = () => toTeacher('hello', { sid: S.me.sid });
+  const hello = () => toTeacher('hello', { sid: S.me.sid, boardId:S.cfg?.boardId, protocol:4 });
   const onCfg = p => {
-    found = true; S.cfg = p; LS.set('tow:cfg:' + code, p);
-    if ($('#student-view').classList.contains('hide')) enterStudent(); else renderStudent();
-    resendStalled(); // 선생님 화면이 다시 연결되면 설정이 한 번 오므로, 그때 아직 도착 확인을 못 받은 근거를 다시 보낸다
+    if(p.contentV4)p={...p,...p.contentV4};
+    if(S.joinId!==joinId||!safeId(p.boardId)||!safeId(p.roomId)||!Number.isSafeInteger(p.configSeq)||p.configSeq<0||typeof p.question!=='string'||typeof p.left!=='string'||typeof p.right!=='string'||!Number.isInteger(p.stage)||p.stage<0)return;
+    if(S.cfg&&S.cfg.roomId!==p.roomId)return;
+    const prior=S.cfg||LS.get('tow:cfg:'+code);
+    if(prior?.roomId===p.roomId && (p.configSeq < prior.configSeq || (p.configSeq===prior.configSeq && prior.boardId!==p.boardId)))return;
+    const changed=S.cfg?.boardId!==p.boardId, stageChanged=!!S.cfg && S.cfg.stage!==p.stage;
+    if(changed&&S.cfg)saveDraft();
+    if(S.me.roomId&&S.me.roomId!==p.roomId){S.me={sid:uid(),name,cards:[],likes:[],drafts:{},roomId:p.roomId};saveMe();joinGame(code,name);return;}
+    S.me.roomId=p.roomId;S.me.drafts ||= {};S.me.cards.forEach(c=>{if(!c.boardId)c.boardId=p.legacyBoardId;});saveMe();
+    found=true;S.cfg=p;LS.set('tow:cfg:'+code,p);
+    if($('#student-view').classList.contains('hide'))enterStudent();else {if(changed)restoreDraft();else if(stageChanged){S.editing=null;S.from=null;saveDraft();}renderStudent();}
+    resendStalled();
   };
+
   S.chs = [
     openChannel(topicAll(code), { config: onCfg }),
     openChannel(topicMe(code, S.me.sid), {
       config: onCfg,
-      ack: p => { const c = S.me.cards.find(x => x.id === p.id); if (c && (p.rev ?? 0) >= c.rev) { c.ok = true; saveMe(); delete S.pending[p.id]; renderMine(); } },
+      refresh:p=>toast(p.message||'새로고침해 주세요.',6000),
+      ack: p => { const c = S.me.cards.find(x => x.id === p.id && x.boardId===p.boardId); if (c && (p.rev ?? 0) >= c.rev) { c.ok = true; saveMe(); delete S.pending[p.id]; renderMine(); } },
     }, st => {
       S.connected = st === 'SUBSCRIBED'; $('#s-dot').classList.toggle('on', S.connected);
-      if (S.connected) { hello(); resendPending(); }
+      if (S.connected) { hello(); if(S.cfg)resendPending(); }
     }),
   ];
   // 선생님 화면의 답이 늦으면 몇 번 더 묻는다
@@ -885,7 +932,10 @@ function joinGame(code, name) {
     $('#j-msg').textContent = '선생님 화면을 찾지 못했어요. 코드를 확인하고 다시 눌러 주세요.';
   }, 6500);
 }
-function enterStudent() { $('#j-go').disabled = false; show('student-view'); S.side = null; S.editing = null; resetForm(); renderStudent(); }
+function enterStudent() { $('#j-go').disabled=false; show('student-view'); restoreDraft(); renderStudent(); }
+function myBoardCards(){return S.me?.cards.filter(c=>c.boardId===S.cfg?.boardId)||[];}
+function saveDraft(){if(!S.me||!S.cfg||S.restoring)return;S.me.drafts ||= {};S.me.drafts[S.cfg.boardId]={text:$('#s-text').value,strength:+$('#s-str').value,side:S.side,editing:S.editing,from:S.from,stage:curStage()};saveMe();}
+function restoreDraft(){S.restoring=true;const d=S.me?.drafts?.[S.cfg?.boardId];resetForm();if(d){$('#s-text').value=d.text||'';$('#s-str').value=d.strength||3;S.editing=myBoardCards().some(c=>c.id===d.editing&&stOf(c)===curStage())?d.editing:null;S.from=curStage()&&myBoardCards().some(c=>c.id===d.from&&stOf(c)===0)?d.from:null;setSide(d.side||null);$('#s-form-title').textContent=formTitle();$('#s-send').textContent=S.editing?'다시 보내기':'보내기';$('#s-cancel-edit').classList.toggle('hide',!S.editing&&!S.from);}S.restoring=false;}
 function curStage() { return S.cfg?.stage || 0; }
 function formTitle() { return S.editing ? '내 근거 다시 놓기' : S.from ? '만약에 생각 놓기' : curStage() ? '만약에 생각 보내기' : '내 근거 보내기'; }
 function renderStudent() {
@@ -908,17 +958,17 @@ function mineItem(c, extra) {
 }
 function renderMine() {
   const box = $('#s-mine'); box.innerHTML = '';
-  $('#s-mine-empty').classList.toggle('hide', S.me.cards.length > 0);
+  $('#s-mine-empty').classList.toggle('hide', myBoardCards().length > 0);
   const st = curStage();
-  const first = S.me.cards.filter(c => stOf(c) === 0), now = st ? S.me.cards.filter(c => stOf(c) === st) : [];
-  const older = S.me.cards.filter(c => stOf(c) > 0 && stOf(c) !== st);
+  const first = myBoardCards().filter(c => stOf(c) === 0), now = st ? myBoardCards().filter(c => stOf(c) === st) : [];
+  const older = myBoardCards().filter(c => stOf(c) > 0 && stOf(c) !== st);
   const section = (title, list, build) => {
     if (!list.length) return;
     if (title) { const h = document.createElement('div'); h.className = 'mycards-h'; h.textContent = title; box.appendChild(h); }
     const ul = document.createElement('ul'); ul.className = 'mycards'; list.forEach(c => ul.appendChild(build(c))); box.appendChild(ul);
   };
   section(st ? '처음 생각' : (older.length ? '처음 생각' : ''), first, c => {
-    const child = st ? S.me.cards.find(x => x.from === c.id && stOf(x) === st) : null;
+    const child = st ? myBoardCards().find(x => x.from === c.id && stOf(x) === st) : null;
     const li = mineItem(c, child ? `<div class="linkto">→ 만약에: ${esc(sideLabel(child.side) || '')} 쪽 · 세기 ${child.strength}${child.side === c.side && child.strength === c.strength ? ' (그대로)' : ' (옮김)'}</div>` : '');
     const acts = li.querySelector('.acts');
     if (!st) { const b = document.createElement('button'); b.textContent = '다시 놓기'; b.onclick = () => startEdit(c.id); acts.appendChild(b); }
@@ -936,12 +986,12 @@ function renderMine() {
   section('앞선 만약에 생각', older, c => { const li = mineItem(c); li.classList.add('past'); return li; });
 }
 function keepSame(id) {
-  const p = S.me.cards.find(x => x.id === id); if (!p) return;
-  const c = { id: uid(), text: p.text, side: p.side, strength: p.strength, rev: 0, ok: false, stage: curStage(), from: p.id };
+  const p = myBoardCards().find(x => x.id === id); if (!p) return;
+  const c = { id: uid(), boardId:S.cfg.boardId, text: p.text, side: p.side, strength: p.strength, rev: 0, ok: false, stage: curStage(), from: p.id };
   S.me.cards.push(c); saveMe(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('처음 생각 그대로 보냈어요');
 }
 function startFrom(id) {
-  const p = S.me.cards.find(x => x.id === id); if (!p) return;
+  const p = myBoardCards().find(x => x.id === id); if (!p) return;
   S.editing = null; S.from = id; $('#s-text').value = p.text; $('#s-str').value = p.strength; setSide(p.side);
   $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.remove('hide');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -949,18 +999,19 @@ function startFrom(id) {
 function renderFriends() {
   const on = !!(S.cfg && S.cfg.share && S.cfg.board);
   $('#s-friends-panel').classList.toggle('hide', !on); if (!on) return;
-  const mine = new Set(S.me.cards.map(c => c.id));
+  const mine = new Set(myBoardCards().map(c => c.id));
   const list = S.cfg.board.filter(c => !mine.has(c.id) && (c.stage || 0) === curStage());
   const ul = $('#s-friends'); ul.innerHTML = list.length ? '' : '<li>아직 친구 근거가 없어요.</li>';
   S.me.likes = S.me.likes || [];
   for (const c of list) {
-    const liked = S.me.likes.includes(c.id);
+    S.me.boardLikes ||= {}; const likes=S.me.boardLikes[S.cfg.boardId] ||= [];
+    const liked = likes.includes(c.id);
     const li = document.createElement('li'); li.className = c.side;
     li.innerHTML = `<span>${esc(c.text)} <span class="note">· ${esc(sideLabel(c.side))} ${c.strength}</span></span><button class="${liked ? 'on' : ''}">♥ ${c.likes || 0}</button>`;
     li.querySelector('button').onclick = () => {
-      const on2 = !S.me.likes.includes(c.id);
-      S.me.likes = on2 ? [...S.me.likes, c.id] : S.me.likes.filter(x => x !== c.id); saveMe();
-      toTeacher('like', { id: c.id, sid: S.me.sid, on: on2 }); renderFriends();
+      const ownLikes=S.me.boardLikes[S.cfg.boardId]||[], on2 = !ownLikes.includes(c.id);
+      S.me.boardLikes[S.cfg.boardId]=on2?[...ownLikes,c.id]:ownLikes.filter(x=>x!==c.id);saveMe();
+      toTeacher('like', { boardId:S.cfg.boardId,configSeq:S.cfg.configSeq,id: c.id, sid: S.me.sid, on: on2 }); renderFriends();
     };
     ul.appendChild(li);
   }
@@ -993,22 +1044,23 @@ function updatePreview() {
   tok.className = 'tok ' + (S.side || 'unset');
   tok.textContent = $('#s-text').value.trim() || '내 근거';
   // 다시 놓기·옮기기일 때는 처음 자리를 점선 ○로 남긴다
-  const orig = S.me && S.me.cards.find(x => x.id === (S.from || S.editing));
+  const orig = S.me && myBoardCards().find(x => x.id === (S.from || S.editing));
   $('#s-ghost').classList.toggle('hide', !orig); $('#s-ghost-note').classList.toggle('hide', !orig);
   if (orig) $('#s-ghost').style.left = mX(orig.side, orig.strength) + '%';
-  $('#s-send').disabled = !(S.side && $('#s-text').value.trim());
+  $('#s-send').disabled = !(S.side && $('#s-text').value.trim()); saveDraft();
 }
-function resetForm() { $('#s-text').value = ''; $('#s-str').value = 3; S.editing = null; S.from = null; setSide(null); $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.add('hide'); }
+function resetForm() { $('#s-text').value = ''; $('#s-str').value = 3; S.editing = null; S.from = null; setSide(null); $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.add('hide'); saveDraft(); }
 function startEdit(id) {
-  const c = S.me.cards.find(x => x.id === id); if (!c) return;
+  const c = myBoardCards().find(x => x.id === id); if (!c) return;
   S.editing = id; S.from = null; $('#s-text').value = c.text; $('#s-str').value = c.strength; setSide(c.side);
   $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '다시 보내기'; $('#s-cancel-edit').classList.remove('hide');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function sendCard(c) {
-  S.pending[c.id] = (S.pending[c.id] || 0) + 1;
-  toTeacher('card', { id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev, stage: stOf(c), from: c.from || null });
-  setTimeout(() => { const cc = S.me.cards.find(x => x.id === c.id); if (cc && !cc.ok && S.pending[c.id] && S.pending[c.id] < 6) sendCard(cc); }, 3000);
+  if(!S.cfg||!S.me.cards.includes(c)||!c.boardId)return;
+  const session=S.joinId, owner=S.me; S.pending[c.id] = (S.pending[c.id] || 0) + 1;
+  toTeacher('card', { boardId:c.boardId,configSeq:S.cfg?.configSeq,id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev, stage: stOf(c), from: c.from || null });
+  setTimeout(() => { if(S.joinId!==session||S.me!==owner)return; const cc = S.me.cards.find(x => x.id === c.id && x.boardId===c.boardId); if (cc && !cc.ok && S.pending[c.id] && S.pending[c.id] < 6) sendCard(cc); }, 3000);
 }
 function resendPending() { for (const c of S.me.cards) if (!c.ok) { S.pending[c.id] = 0; sendCard(c); } }
 function resendStalled() { for (const c of S.me.cards) if (!c.ok && !(S.pending[c.id] > 0 && S.pending[c.id] < 6)) { S.pending[c.id] = 0; sendCard(c); } }
@@ -1019,32 +1071,23 @@ $('#s-cancel-edit').onclick = resetForm;
 $('#s-send').onclick = () => {
   const text = $('#s-text').value.trim().slice(0, 60), strength = +$('#s-str').value; if (!text || !S.side) return;
   let c;
-  if (S.editing) { c = S.me.cards.find(x => x.id === S.editing); Object.assign(c, { text, side: S.side, strength, rev: c.rev + 1, ok: false }); }
-  else { c = { id: uid(), text, side: S.side, strength, rev: 0, ok: false, stage: curStage(), from: S.from || null }; S.me.cards.push(c); }
+  if (S.editing) { c = myBoardCards().find(x => x.id === S.editing); if(!c)return; const changed=c.text!==text||c.side!==S.side||c.strength!==strength; Object.assign(c,{text,side:S.side,strength,rev:c.rev+(changed?1:0),ok:false}); }
+  else { c = { id: uid(), boardId:S.cfg.boardId, text, side: S.side, strength, rev: 0, ok: false, stage: curStage(), from: S.from || null }; S.me.cards.push(c); }
   saveMe(); resetForm(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('보냈어요');
 };
-$('#s-leave').onclick = () => { leaveChannels(); S.joinId = null; history.replaceState(null, '', location.pathname); openJoin(''); };
+$('#s-leave').onclick = () => { saveDraft(); leaveChannels(); S.joinId = null; history.replaceState(null, '', location.pathname); openJoin(''); };
 
 /* =================== 시작 =================== */
 $('#go-teacher').onclick = () => openSetup(false);
 $('#go-student').onclick = () => openJoin('');
-$('#resume-btn').onclick = () => { const code = LS.get('tow:last'); T.g = LS.get(gameKey(code)); history.replaceState(null, '', '?t=' + code); openBoard(); };
-(function init() {
-  const p = new URLSearchParams(location.search);
-  const c = p.get('c'), t = p.get('t');
-  if (c && /^\d{4}$/.test(c)) {
-    // 같은 탭을 새로고침한 경우에만 자동으로 다시 들어간다(새 탭은 이름을 채운 채 확인만 받는다)
-    let nm = null; try { nm = sessionStorage.getItem(nameKey(c)); } catch {}
-    const me = nm && loadMe(c, nm);
-    if (me?.name) { S.cfg = LS.get('tow:cfg:' + c); joinGame(c, me.name); if (S.cfg) enterStudent(); else openJoin(c); }
-    else openJoin(c);
-    return;
-  }
-  if (t && LS.get(gameKey(t))) { T.g = LS.get(gameKey(t)); openBoard(); return; }
-  show('home-view');
-  const last = LS.get('tow:last'), g = last && LS.get(gameKey(last));
-  if (g) { $('#resume-box').classList.remove('hide'); $('#resume-code').textContent = g.code; $('#resume-q').textContent = g.question; }
+$('#resume-btn').onclick=()=>{const r=LS.get(roomKey(LS.get('tow:lastRoom')))||allStoredRooms()[0];if(r)openRoom(r);};
+(function init(){migrateStoredGames();const p=new URLSearchParams(location.search),c=p.get('c'),t=p.get('t'),rid=p.get('room');
+ if(c&&/^\d{4}$/.test(c)){let nm=null;try{nm=sessionStorage.getItem(nameKey(c));}catch{}const me=nm&&loadMe(c,nm);if(me?.name)joinGame(c,me.name);else openJoin(c);return;}
+ const r=rid?LS.get(roomKey(rid)):t?allStoredRooms().find(r=>r.code===t):null;
+ if(r){openRoom(r);return;}show('home-view');const last=LS.get(roomKey(LS.get('tow:lastRoom')))||allStoredRooms()[0];if(last){$('#resume-box').classList.remove('hide');$('#resume-code').textContent=last.code;$('#resume-q').textContent=last.boards[0].question;}
 })();
+window.TugData={migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION};
+
 </script>
 </body>
 </html>
