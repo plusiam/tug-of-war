@@ -215,12 +215,12 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 @media(max-width:360px){#student-view.wrap{padding:18px 12px 36px}#student-view .panel{padding:14px}}
 /* 학생 화면 질문 카드: 질문이 화면 제목이 아니라 '지금 생각할 것'으로 먼저 보이게 한다. 색은 양쪽 끝(파랑·빨강)·만약에(노랑)와 겹치지 않는 남색만 쓴다. */
 #student-view .s-q{background:var(--ink);color:#fff;border-radius:16px;padding:10px 16px 13px;font-size:24px;line-height:1.35;margin:0 0 12px;word-break:keep-all;overflow-wrap:anywhere}
-#student-view .s-q::before{content:"질문";display:block;font-size:14px;font-weight:700;color:#d5dbe6;margin-bottom:2px}
+#student-view .s-q::before{content:none}
 #student-view .s-q.long{font-size:21px}
 #student-view h2{font-size:18px}
 @media(max-width:520px){#student-view.wrap{padding-top:16px}}
 /* 만약에가 뜨면 질문과 한 덩어리로 붙이고, 지금 답할 만약에 문구를 더 크게 */
-#student-view.has-wf .s-q{font-size:18px;border-radius:16px 16px 0 0;margin-bottom:0;padding-bottom:10px}
+#student-view.has-wf .s-q{border-radius:16px;margin-bottom:0}
 #student-view .s-wf{margin:0 0 12px;padding:10px 16px 12px;border-radius:0 0 16px 16px;border-top:0;word-break:keep-all;overflow-wrap:anywhere}
 #student-view .s-wf .wf-l{display:block;font-size:14px;font-weight:700;color:#8a6d00;margin-bottom:2px}
 #student-view .s-wf .wf-t{display:block;font-size:22px;font-weight:800;line-height:1.35}
@@ -345,6 +345,41 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
   .qr-ov .actions{margin-top:10px}
   .qr-ov .actions button{flex:1 1 0}
 }
+
+/* 질문의 위계와 현재 응답: 처음 질문은 중심, 추가 질문은 그 아래의 조건. 고정/자동 스크롤 없음. */
+.qh-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;margin-bottom:5px;font-size:13px;font-weight:700;line-height:1.45}
+.qh-label{color:var(--sub)}.qh-text{display:block;word-break:keep-all;overflow-wrap:anywhere}
+.qh-now{display:inline-block;border:1px solid #a7afbd;border-radius:6px;padding:2px 7px;font-size:12px;font-weight:800;line-height:1.4;color:var(--ink);background:#fff}
+.qh-help{display:block;margin-top:5px;font-size:13px;line-height:1.45;font-weight:500;color:#685b39}
+.qh-paused{display:block;font-size:14px;line-height:1.5;font-weight:700;color:var(--sub)}
+#student-view .s-q .qh-label{color:#d5dbe6}
+#student-view .s-q .qh-now{border-color:#c4cbd7;background:#fff;color:var(--ink)}
+#student-view .s-wf{position:relative;margin:10px 0 12px 16px;border:1px solid #e3d8ac;border-left:3px solid #b5a674;border-radius:10px;background:#fffaf0;padding:10px 12px}
+#student-view .s-wf::before{content:"";position:absolute;left:12px;top:-11px;height:10px;border-left:2px solid #bfc5cf}
+#student-view .s-wf .wf-l{font-size:13px;margin:0 0 2px;font-weight:600}
+#student-view .s-wf .wf-t{font-size:20px;line-height:1.4}
+#student-view .s-wf .qh-label{color:#685b39}
+.s-q-echo .e-q{display:block;font-size:15px;font-weight:700;color:var(--ink);white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
+.s-q-echo .e-main{display:block;overflow:visible;-webkit-line-clamp:unset}
+.s-q-echo small{display:block;margin:0 0 2px;font-size:12px;color:var(--sub)}
+.s-q-echo.wf{background:#f2f3f6}
+.s-q-echo.wf .e-main{margin:7px 0 0 10px;padding:6px 9px;border-left:2px solid #b5a674;background:#fffaf0;border-radius:0 6px 6px 0;font-size:15px}
+.s-q-echo.wf .e-main small{font-weight:800;color:#685b39}
+.s-q-echo .e-paused{display:block;margin-top:5px;font-size:13px;font-weight:600;color:var(--sub)}
+.question-stack{flex-shrink:0;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);min-width:0}
+#b-q{font-size:calc(26px * var(--fs,1));font-weight:800;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.question-stack .whatif-bar{position:relative;margin:10px 0 0 16px;padding:8px 12px;border:1px solid #e3d8ac;border-left:3px solid #b5a674;border-radius:10px;background:#fffaf0;font-size:calc(20px * var(--fs,1));line-height:1.4;white-space:normal;overflow:visible;word-break:keep-all;overflow-wrap:anywhere}
+.question-stack .whatif-bar::before{content:"";position:absolute;left:12px;top:-11px;height:10px;border-left:2px solid #bfc5cf}
+.question-stack .whatif-bar .wf-lead{display:block;font-size:13px;color:#685b39;font-weight:600}
+#board-view.phone .question-stack{padding:8px 10px}
+#board-view.phone #b-q{font-size:22px;line-height:1.35}
+#board-view.phone .question-stack .whatif-bar{font-size:18px;padding:7px 10px;white-space:normal;overflow:visible;text-overflow:clip}
+#board-view.phone .question-stack .qh-help{display:none}
+#board-view.phone.land .question-stack{padding:6px 10px}
+#board-view.phone.land #b-q{font-size:18px;line-height:1.3}
+#board-view.phone.land .question-stack .whatif-bar{font-size:16px;margin-top:7px;padding:5px 10px}
+#board-view.phone.land .question-stack .qh-meta{margin-bottom:2px;font-size:12px}
+
 </style>
 </head>
 <body>
@@ -390,8 +425,11 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 
 <!-- 교사 공유 화면 -->
 <section id="board-view" class="hide">
-  <div class="topbar">
+  <div class="question-stack" aria-label="처음 질문과 추가 질문">
     <div class="q" id="b-q"></div>
+    <div class="whatif-bar" id="b-whatif"></div>
+  </div>
+  <div class="topbar">
     <span class="codechip" id="b-code" title="크게 보기">접속 코드 <b></b></span>
     <span class="status"><span class="dot" id="b-dot"></span><span id="b-count">0</span>장</span>
     <div class="tools">
@@ -404,7 +442,6 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
       <button id="t-more">⋯</button>
     </div>
   </div>
-  <div class="whatif-bar" id="b-whatif"></div>
   <div class="countbar" id="b-countbar"></div>
   <div class="stagebar" id="b-stagebar"></div>
   <div id="board">
@@ -1016,21 +1053,32 @@ function renderStageBar() {
     (m.ls !== m.latest ? `<span class="st-past">지난 질문을 보는 중이에요</span><button type="button" data-st="${m.latest}">최신으로</button>` : '');
 }
 $('#b-stagebar').addEventListener('click', e => { const b = e.target.closest('[data-st]'); if (b && T.g) setViewStage(+b.dataset.st); });
+function questionHeadingHTML(question,current,note='',nowLabel='지금 답할 질문') {
+  return '<span class="qh-meta"><span class="qh-label">처음 질문</span>'+(current?'<span class="qh-now">'+esc(nowLabel)+'</span>':'')+(note?'<span class="qh-label">'+esc(note)+'</span>':'')+'</span><span class="qh-text">'+esc(question)+'</span>';
+}
+function extraQuestionHTML(text,stage,current,note='',nowLabel='지금 답할 질문') {
+  return '<span class="qh-meta"><span class="qh-label">추가 질문 '+stage+'</span>'+(current?'<span class="qh-now">'+esc(nowLabel)+'</span>':'')+(note?'<span class="qh-label">'+esc(note)+'</span>':'')+'</span><span class="wf-lead wf-l">그런데 만약에?</span><span class="qh-text wf-t">'+esc(text)+'</span><span class="qh-help">이 조건을 생각하며 처음 질문에 대한 지금 생각을 적어요.</span>';
+}
+function studentQuestionEcho(c,open) {
+  const first='<span class="e-q"><small>처음 질문</small>'+esc(c.question)+'</span>';
+  return c.whatif ? first+'<span class="e-main"><small>지금 답할 질문 · 추가 질문 '+(c.stage||0)+'</small>'+esc(c.whatif)+'</span>' : open?'<span class="e-main"><small>지금 답할 질문 · 처음 질문</small>'+esc(c.question)+'</span>':first+'<span class="e-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
+}
 function renderBoard() {
   const g = T.g; if (!g) return;
   const board = $('#board');
   $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
-  $('#b-q').textContent = (g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'[이전 버전 여러 카드 보관] ':'') + (T.room.offline?'[오프라인 보관] ':T.viewedBoardId!==T.room.activeBoardId?'[보관판 열람] ':'') + g.question;
+  const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=g.whatif.at(-1), paused=!wf&&initialLocked(g);
+  const viewNote=[T.room.offline?'오프라인 보관':!responding?'보관판 열람':paused?'응답 잠시 멈춤':'',g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'이전 버전 여러 카드 보관':''].filter(Boolean).join(' · ');
+  $('#b-q').innerHTML=questionHeadingHTML(g.question,responding&&!wf&&!paused,viewNote,'학생이 지금 답할 질문');
   $('#b-code b').textContent = T.room.offline ? '오프라인' : g.code;
   $('#b-l').textContent = '◀ ' + g.left; $('#b-r').textContent = g.right + ' ▶';
   $('#t-names').classList.toggle('on', g.showNames); $('#t-names').textContent = g.showNames ? '이름 숨기기' : '이름 보이기';
   $('#t-share').classList.toggle('on', g.share);
   $('#t-share').textContent = g.share ? '친구 근거: 켜짐' : '친구 근거: 꺼짐';
   $('#t-share').setAttribute('aria-pressed', String(!!g.share));
-  const wf = g.whatif.at(-1);
-  $('#b-whatif').classList.toggle('show', !!wf);
-  $('#b-whatif').innerHTML = wf ? `그런데 만약에? ${esc(wf)}<small>처음 생각은 줄 위에 남고, 만약에 생각은 줄 아래에 놓여요</small>` : '';
+  $('#b-whatif').classList.toggle('show', !!wf||paused);
+  $('#b-whatif').innerHTML=wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'':'보관 중 · 학생 응답 아님','학생이 지금 답할 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
   renderCounts(); renderStageBar();
   const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
   // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
@@ -1738,17 +1786,18 @@ function renderComposerStatus(){
   $('#s-str').setAttribute('aria-valuetext','세기 '+$('#s-str').value);
 }
 function curStage() { return S.cfg?.stage || 0; }
-function formTitle() { return !studentStageOpen()?'이전 생각 · 읽기 전용':currentCard()?'이번 생각 수정':curStage()?'이번 만약에 생각 보내기':'처음 생각 보내기'; }
+function formTitle() { return !studentStageOpen()?'응답 잠시 멈춤':curStage()?'추가 질문 '+curStage()+(currentCard()?'의 내 생각 수정':'에 답하기'):currentCard()?'처음 질문의 내 생각 수정':'처음 질문에 답하기'; }
 function renderStudent() {
   const c = S.cfg; if (!c) return;
   // 단계가 바뀌면(만약에 시작·내림) 쓰던 ‘옮기기’는 취소한다
   if (S.from && !curStage()) resetForm();
   $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
-  $('#s-q').textContent = c.question;
+  const open=studentStageOpen();
+  $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&!c.whatif,!open?'기록 보관':'');
   $('#s-q').classList.toggle('long', (c.question || '').length > 30); $('#student-view').classList.toggle('has-wf', !!c.whatif);
-  $('#s-wf').classList.toggle('hide', !c.whatif);
-  $('#s-wf').innerHTML = c.whatif ? `<span class="wf-l">그런데 만약에?</span><span class="wf-t">${esc(c.whatif)}</span><div class="note" style="font-weight:500;margin-top:4px">앞선 생각 그대로 보내거나 이번 생각을 고쳐 보내요. 단계마다 한 장이며, 비교 기준은 처음 생각이에요.</div>` : '';
-  { const e = $('#s-q-echo'), k = (c.whatif || '') + '\n' + c.question; if (e.dataset.k !== k) { e.dataset.k = k; e.classList.toggle('wf', !!c.whatif); e.innerHTML = c.whatif ? `<span class="e-q">${esc(c.question)}</span><span class="e-main"><small>그런데 만약에?</small>${esc(c.whatif)}</span>` : `<span class="e-main"><small>질문</small>${esc(c.question)}</span>`; } }
+  $('#s-wf').classList.toggle('hide', !c.whatif&&open);
+  $('#s-wf').innerHTML=c.whatif?extraQuestionHTML(c.whatif,curStage(),true):'<span class="qh-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
+  { const e=$('#s-q-echo'), k=JSON.stringify([c.question,c.whatif,c.stage,open]); if(e.dataset.k!==k){e.dataset.k=k;e.classList.toggle('wf',!!c.whatif);e.innerHTML=studentQuestionEcho(c,open);} }
   $('#s-rope-left').textContent=c.left; $('#s-rope-right').textContent=c.right;
   $('#s-sideL').textContent = '◀ ' + c.left; $('#s-sideR').textContent = c.right + ' ▶';
   $('#s-form-title').textContent = formTitle();
@@ -2034,7 +2083,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pageshow', e => { if (e.persisted) onPageReturn(); }); // 첫 로드의 pageshow는 복귀가 아니다
 window.addEventListener('online', onPageReturn);
-window.TugData={stageCard,initialCard,previousCard,initialLocked,boardInputStage,cardRejection,migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
+window.TugData={questionHeadingHTML,extraQuestionHTML,studentQuestionEcho,stageCard,initialCard,previousCard,initialLocked,boardInputStage,cardRejection,migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
   // 폰 교사 화면·연결 안정화 시험용 순수 함수
   isPhoneBoard,isPhoneLandscape,phoneBoardModel,WF_GONE,whatifList,latestStage,whatifCardCount,editWhatif,canDeleteWhatif,deleteWhatif,validStage,phoneRowView,phoneBoardHTML,codeClashLoser,autoResendPlan,MAX_AUTO_REVIVES,RETURN_JITTER_MS,RETURN_GAP_MS};
 
