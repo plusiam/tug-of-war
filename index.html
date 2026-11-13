@@ -1089,11 +1089,13 @@ function startFrom(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function renderFriends() {
-  const on = !!(S.cfg && S.cfg.share && S.cfg.board);
-  $('#s-friends-panel').classList.toggle('hide', !on); if (!on) return;
   const mine = new Set(myBoardCards().map(c => c.id));
-  const list = S.cfg.board.filter(c => !mine.has(c.id) && (c.stage || 0) === curStage());
-  const ul = $('#s-friends'); ul.innerHTML = list.length ? '' : '<li>아직 친구 근거가 없어요.</li>';
+  const list = S.cfg?.share && Array.isArray(S.cfg.board)
+    ? S.cfg.board.filter(c => !mine.has(c.id) && (c.stage || 0) === curStage()) : [];
+  const ul = $('#s-friends'); ul.innerHTML = '';
+  // Share only actual peers in this board/stage; hide empty panels and clear stale content.
+  $('#s-friends-panel').classList.toggle('hide', list.length === 0);
+  if (!list.length) return;
   S.me.likes = S.me.likes || [];
   for (const c of list) {
     S.me.boardLikes ||= {}; const likes=S.me.boardLikes[S.cfg.boardId] ||= [];
