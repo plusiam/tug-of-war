@@ -85,6 +85,15 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 .countbar .cl{font-weight:800;color:var(--sub)}
 .countbar .cL{color:var(--L);font-weight:800} .countbar .cR{color:var(--R);font-weight:800}
 .countbar .cc{color:#8a6d00;font-weight:700}
+/* 회차 고르기(만약에 질문이 둘 이상일 때) */
+.stagebar{display:none;padding:6px 16px;background:#fff;border-bottom:1px solid var(--line);gap:6px 8px;flex-wrap:wrap;align-items:center;font-size:calc(15px * var(--fs,1))}
+.stagebar.show{display:flex}
+.stagebar .cl{font-weight:800;color:var(--sub)}
+.stagebar button{padding:4px 10px;font-size:14px;min-height:34px;font-weight:700}
+.stagebar button.on,.pb-stages button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stagebar button small,.pb-stages button small{font-weight:500;opacity:.8;margin-left:4px}
+.stagebar .st-q{flex:1 1 120px;min-width:0;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stagebar .st-past{color:#a05a00;font-weight:700}
 .card{position:absolute;width:var(--cw,9%);min-width:110px;background:var(--card);border-radius:10px;padding:7px 8px 6px;
   box-shadow:0 2px 6px rgba(20,30,50,.14);border:2px solid transparent;border-top:6px solid var(--L);cursor:grab;
   font-size:calc(15px * var(--fs,1));line-height:1.35;word-break:keep-all;overflow-wrap:anywhere;transform:translate(-50%,0)}
@@ -246,6 +255,12 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 .pb-words div{display:grid;grid-template-columns:1fr auto 1fr}
 .pb-words div span:last-child{text-align:right}
 .pb-older{margin:8px 0 0;font-size:14px;color:var(--sub)}
+.pb-stages{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}
+.pb-stages button{flex:0 0 auto;min-width:44px;min-height:44px;padding:4px 10px;font-size:14px;font-weight:700}
+.pb-stages+.pb-rowlabel{margin-top:6px}
+#board-view.phone .stagebar{display:none!important}
+#board-view.phone.land .pb-stages{margin-top:6px}
+#board-view.phone.land .pb-stages button{min-height:36px}
 /* 단계 필터 · 카드 세로 목록 */
 /* 목록을 내려도 필터 줄 위로 카드가 비치지 않게, 목록 상자의 위쪽 여백(10px)까지 필터 줄이 덮는다 */
 .pb-filter{position:sticky;top:-10px;z-index:2;display:flex;gap:6px;margin-top:-10px;padding:10px 0 8px;background:var(--bg)}
@@ -373,6 +388,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
   </div>
   <div class="whatif-bar" id="b-whatif"></div>
   <div class="countbar" id="b-countbar"></div>
+  <div class="stagebar" id="b-stagebar"></div>
   <div id="board">
     <div class="lane top" id="b-lane-top"><b>처음 생각</b></div>
     <div class="lane bot" id="b-lane-bot"></div>
@@ -630,7 +646,13 @@ function canDeleteWhatif(g, k) {
   return Number.isInteger(k) && k >= 1 && k <= all.length && all[k - 1] !== WF_GONE && !whatifIsUp(g, k) && whatifCardCount(g, k) === 0;
 }
 function deleteWhatif(g, k) { if (!canDeleteWhatif(g, k)) return false; const [arr, i] = whatifSlot(g, k); arr[i] = WF_GONE; return true; }
-function lastStage() { return latestStage(T.g); }
+/* 회차 고르기: 판과 폰 목록에서 볼 만약에 회차. 화면 상태(T.view)일 뿐 저장하지 않고, 학생에게도 가지 않는다.
+   비교 기준은 언제나 처음 생각. 다른 질문판으로 옮기거나 고른 회차가 지워지면 최신 회차로 돌아간다. */
+function validStage(g, k) { const all = whatifList(g); return Number.isInteger(k) && k >= 1 && k <= all.length && all[k - 1] !== WF_GONE; }
+function shownStage() { const g = T.g, v = T.view; return v && v.boardId === g.id && validStage(g, v.stage) ? v.stage : latestStage(g); }
+function setViewStage(k) { T.view = validStage(T.g, k) && k !== latestStage(T.g) ? { boardId: T.g.id, stage: k } : null; T.sel.clear(); renderBoard(); }
+// 판에 보이는 만약에 회차(고른 회차, 기본은 최신). 내보내기 요약은 보기와 상관없이 latestStage를 쓴다.
+function lastStage() { return shownStage(); }
 function inputStage() { return T.g.whatif.length ? allWhatifs().length : 0; }
 function onBoard(c) { const st = stageOf(c); return !c.hidden && (st === 0 || st === lastStage()); }
 // 만약에 단계에서 처음 생각과 자리·세기가 같은 카드는 작은 표시로(누르면 펼쳐짐)
@@ -926,8 +948,8 @@ function stageStats(stage) {
   const v = Object.values(by);
   return { by, n: v.length, L: v.filter(x => x.side === 'L').length, R: v.filter(x => x.side === 'R').length };
 }
-function changeSummary() {
-  const s0 = stageStats(0), ls = lastStage(); if (!ls) return null;
+function changeSummary(stage) {
+  const s0 = stageStats(0), ls = stage ?? lastStage(); if (!ls) return null;
   const sk = stageStats(ls); let side = 0, str = 0, same = 0, fresh = 0;
   for (const b of Object.values(sk.by)) { if (b.chg === '쪽 바뀜') side++; else if (b.chg === '세기 바뀜') str++; else if (b.chg === '그대로') same++; else fresh++; }
   const all = new Set([...Object.keys(s0.by), ...Object.keys(sk.by)]).size;
@@ -942,11 +964,21 @@ function renderCounts() {
   const s0 = stageStats(0), cs = changeSummary();
   let h = `<span><span class="cl">처음 생각</span> <span class="cL">◀ ${esc(g.left)} ${s0.L}명</span> · <span class="cR">${esc(g.right)} ${s0.R}명 ▶</span></span>`;
   if (cs) {
-    h += `<span><span class="cl">만약에 생각</span> <span class="cL">◀ ${cs.sk.L}명</span> · <span class="cR">${cs.sk.R}명 ▶</span> <span class="note">(참여 ${cs.sk.n}/${cs.all}명)</span></span>`;
+    h += `<span><span class="cl">${lastStage() !== latestStage(g) ? `지난 만약에 생각(${lastStage()}번)` : '만약에 생각'}</span> <span class="cL">◀ ${cs.sk.L}명</span> · <span class="cR">${cs.sk.R}명 ▶</span> <span class="note">(참여 ${cs.sk.n}/${cs.all}명)</span></span>`;
     h += `<span class="cc">쪽이 바뀜 친구 ${cs.side} · 세기만 바뀜 친구 ${cs.str} · 그대로 ${cs.same}${cs.fresh ? ` · 새 근거만 ${cs.fresh}` : ''}${cs.wait ? ` · 아직 안 보냄 ${cs.wait}` : ''}</span>`;
   }
   bar.innerHTML = h;
 }
+// 넓은 판의 회차 고르기 줄(만약에 질문이 둘 이상일 때만 보인다). 폰에서는 요약 밧줄 안의 칩이 같은 일을 한다.
+function renderStageBar() {
+  const g = T.g, bar = $('#b-stagebar'), m = phoneBoardModel(g, 'all', shownStage());
+  const show = m.stages.length >= 2; bar.classList.toggle('show', show);
+  bar.innerHTML = !show ? '' : '<span class="cl">만약에 질문</span>' +
+    m.stages.map(st => `<button type="button" data-st="${st.k}" class="${st.k === m.ls ? 'on' : ''}" aria-pressed="${st.k === m.ls}" title="${esc(st.text)}">${st.k}<small>${st.total}장</small></button>`).join('') +
+    `<span class="st-q">${esc(whatifList(g)[m.ls - 1])}</span>` +
+    (m.ls !== m.latest ? `<span class="st-past">지난 질문을 보는 중이에요</span><button type="button" data-st="${m.latest}">최신으로</button>` : '');
+}
+$('#b-stagebar').addEventListener('click', e => { const b = e.target.closest('[data-st]'); if (b && T.g) setViewStage(+b.dataset.st); });
 function renderBoard() {
   const g = T.g; if (!g) return;
   const board = $('#board');
@@ -962,12 +994,13 @@ function renderBoard() {
   const wf = g.whatif.at(-1);
   $('#b-whatif').classList.toggle('show', !!wf);
   $('#b-whatif').innerHTML = wf ? `그런데 만약에? ${esc(wf)}<small>처음 생각은 줄 위에 남고, 만약에 생각은 줄 아래에 놓여요</small>` : '';
-  renderCounts();
-  const ls = lastStage(), wfs = allWhatifs();
-  const older = g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== ls).length;
+  renderCounts(); renderStageBar();
+  const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
+  // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
+  const older = wfs.filter(w => w !== WF_GONE).length >= 2 ? 0 : g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== ls).length;
   const lb = $('#b-lane-bot');
   lb.className = 'lane bot' + (ls ? '' : ' wait');
-  lb.innerHTML = ls ? `<b>만약에 생각</b><span>${esc(wfs[ls - 1])}</span>${older ? `<span style="font-size:13px;font-weight:600">앞선 만약에 카드 ${older}장은 내보내기에 남아 있어요</span>` : ''}`
+  lb.innerHTML = ls ? `<b>${past ? '지난 만약에 생각' : '만약에 생각'}</b><span>${esc(wfs[ls - 1])}</span>${older ? `<span style="font-size:13px;font-weight:600">앞선 만약에 카드 ${older}장은 내보내기에 남아 있어요</span>` : ''}`
     : '';
   // 만약에 전에는 처음 생각이 판 전체를 쓰므로 위·아래 구분 글자를 감춘다
   $('#b-lane-top').classList.toggle('hide', !ls); lb.classList.toggle('hide', !ls);
@@ -1087,8 +1120,8 @@ function isPhoneBoard() { return isNarrowBoard() || isPhoneLandscape(); }
 // 밧줄 왼쪽에서 오른쪽 순: L5…L1 → 0…4, R1…R5 → 5…9
 const ropeIndex = c => c.side === 'L' ? 5 - c.strength : 4 + c.strength;
 // 판에 보이는 카드(onBoard와 같은 규칙)로 요약 밧줄의 칸별 장수와 목록 순서를 만든다. 화면을 건드리지 않는 순수 함수.
-function phoneBoardModel(g, filter) {
-  const ls = latestStage(g);
+function phoneBoardModel(g, filter, stage) {
+  const latest = latestStage(g), ls = validStage(g, stage) ? stage : latest;
   const vis = g.cards.filter(c => !c.hidden && (stageOf(c) === 0 || stageOf(c) === ls));
   const rows = [{ key: 'first', counts: Array(10).fill(0), total: 0 }];
   if (ls) rows.push({ key: 'whatif', counts: Array(10).fill(0), total: 0 });
@@ -1106,7 +1139,9 @@ function phoneBoardModel(g, filter) {
     .filter(c => use === 'all' || (use === 'whatif') === (stageOf(c) > 0))
     // 단계(만약에 먼저) → 달라진 종류 → 밧줄 왼쪽에서 오른쪽 → 도착 순
     .sort((a, b) => stageOf(b) - stageOf(a) || rank.get(a.id) - rank.get(b.id) || ropeIndex(a) - ropeIndex(b) || arrived.get(a.id) - arrived.get(b.id));
-  return { ls, filter: use, rows, total: vis.length, items };
+  // 고를 수 있는 회차(지운 회차 제외)와 회차별 카드 수
+  const stages = whatifList(g).map((w, i) => w === WF_GONE ? null : { k: i + 1, text: w, total: g.cards.filter(c => !c.hidden && stageOf(c) === i + 1).length }).filter(Boolean);
+  return { ls, latest, stages, filter: use, rows, total: vis.length, items };
 }
 // 한 줄에 무엇을 보일지. 이름·근거 글은 넓은 판과 같은 규칙을 따른다:
 //  - 친구 근거 꺼짐: 쓴 사람(없으면 '익명')과 세기만, 근거 글은 펼친 줄만
@@ -1136,14 +1171,19 @@ function phoneSummaryHTML(g, m) {
       `<span class="pb-cell ${side}${n ? '' : ' zero'}" aria-label="${esc(side === 'L' ? g.left : g.right)} 세기 ${strength}: ${n}장">${n}</span>`;
   }).join('');
   const whatifs = [...(g.whatifArchive || []), ...g.whatif];
-  const older = g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== m.ls).length;
+  const pick = (m.stages || []).length >= 2, past = m.latest !== undefined && m.ls !== m.latest;
+  const older = pick ? 0 : g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== m.ls).length;
+  // 회차 고르기 칩: 만약에 질문이 둘 이상일 때만. 숫자는 질문 번호, 작은 글자는 그 회차 카드 수
+  const chips = !pick ? '' : '<div class="pb-stages" role="group" aria-label="만약에 질문 고르기">' +
+    m.stages.map(st => `<button type="button" data-st="${st.k}" class="${st.k === m.ls ? 'on' : ''}" aria-pressed="${st.k === m.ls}" aria-label="${st.k}번 질문, 카드 ${st.total}장">${st.k}<small>${st.total}장</small></button>`).join('') +
+    (past ? `<button type="button" data-st="${m.latest}" class="pb-latest">최신으로</button>` : '') + '</div>';
   const ticks = [5, 4, 3, 2, 1].map(n => `<span>${n}</span>`).join('') + '<span></span>' + [1, 2, 3, 4, 5].map(n => `<span>${n}</span>`).join('');
   let h = `<div class="pb-ends"><span class="L">◀ ${esc(g.left)}</span><span class="R">${esc(g.right)} ▶</span></div>`;
   for (const row of m.rows) {
     if (m.ls) {
       h += row.key === 'first'
         ? `<div class="pb-rowlabel">처음 생각 ${row.total}장</div>`
-        : `<div class="pb-rowlabel">만약에 생각 ${row.total}장 <span>· ${esc(whatifs[m.ls - 1])}</span></div>`;
+        : `${chips}<div class="pb-rowlabel">${past ? '지난 만약에 생각' : '만약에 생각'} ${row.total}장 <span>· ${esc(whatifs[m.ls - 1])}</span></div>`;
     }
     h += `<div class="pb-cells" data-row="${row.key}">${cells(row.counts)}</div>`;
   }
@@ -1204,12 +1244,14 @@ function phoneBoardHTML(g, m, openIds) {
 }
 function renderPhoneBoard(g) {
   const box = $('#phone-board'), keep = box.scrollTop;
-  box.innerHTML = phoneBoardHTML(g, phoneBoardModel(g, T.phoneFilter), T.sel);
+  box.innerHTML = phoneBoardHTML(g, phoneBoardModel(g, T.phoneFilter, shownStage()), T.sel);
   box.scrollTop = keep; // 카드가 들어와 다시 그려도 보던 자리를 지킨다
 }
 // 폰 목록 누르기: 단계 필터 · 줄 펼치기/접기 · 펼친 줄의 「숨기기」. 펼친 줄은 넓은 판의 '선택'(T.sel)과 같은 상태를 쓴다.
 $('#phone-board').addEventListener('click', e => {
   if (!T.g) return;
+  const st = e.target.closest('[data-st]');
+  if (st) { setViewStage(+st.dataset.st); return; }
   const tab = e.target.closest('[data-pf]');
   if (tab) { T.phoneFilter = tab.dataset.pf; renderBoard(); return; }
   const hide = e.target.closest('[data-hide]');
@@ -1318,7 +1360,7 @@ function askWhatif() {
   const gone = all.filter(w => w === WF_GONE).length;
   const prev = all.map((w, i) => { const k = i + 1; if (w === WF_GONE) return ''; const n = whatifCardCount(g, k);
     return `<li data-k="${k}"><span class="wf-q"><b>${k}.</b> ${esc(w)}${whatifIsUp(g, k) ? ' <em>떠 있음</em>' : ''}</span><span class="wf-act"><span class="wf-n">${n ? `카드 ${n}장` : '카드 없음'}</span><button type="button" data-wf="edit">고치기</button>${canDeleteWhatif(g, k) ? '<button type="button" data-wf="del">지우기</button>' : ''}</span></li>`; }).join('');
-  modal(`<h2>그런데 만약에?</h2><p class="note">생각을 흔드는 질문을 띄우면 학생 화면에도 보여요. 학생은 처음 생각마다 「그대로예요」를 누르거나 자리를 옮겨 ‘만약에 생각’으로 보내고, 새 근거를 보낼 수도 있어요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 카드를 누르면 같은 학생의 처음→만약에 화살표가 보여요.<br>· 새 질문을 또 띄우면 줄 아래는 새 만약에 생각으로 바뀌고, 앞선 카드는 내보내기에 남아요.<br>· 「질문 내리기」를 하면 학생 입력은 처음 질문으로 돌아가고, 줄 아래 카드는 그대로 남아요.</p>
+  modal(`<h2>그런데 만약에?</h2><p class="note">생각을 흔드는 질문을 띄우면 학생 화면에도 보여요. 학생은 처음 생각마다 「그대로예요」를 누르거나 자리를 옮겨 ‘만약에 생각’으로 보내고, 새 근거를 보낼 수도 있어요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 카드를 누르면 같은 학생의 처음→만약에 화살표가 보여요.<br>· 새 질문을 또 띄우면 줄 아래는 새 만약에 생각으로 바뀌어요. 앞선 질문의 카드는 판의 「만약에 질문」 번호를 눌러 다시 볼 수 있고, 내보내기에도 남아요.<br>· 「질문 내리기」를 하면 학생 입력은 처음 질문으로 돌아가고, 줄 아래 카드는 그대로 남아요.</p>
     ${canAsk ? '' : '<p class="note wf-warn">지금 보는 질문판은 진행 중이 아니에요. 여기서 띄운 질문은 학생에게 가지 않아요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.</p>'}
     <input type="text" id="wf-in" maxlength="60" placeholder="예) 사자가 다시 커진다면?"${canAsk ? '' : ' disabled'}>
     ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
@@ -1347,7 +1389,7 @@ function askWhatif() {
     });
     ov.querySelector('[data-a=close]').onclick = close;
     const off = ov.querySelector('[data-a=off]'); if (off) off.onclick = () => { hideWhatif(); close(); };
-    const ok = () => { if (!canAsk) return toast('진행 중인 질문판이 아니에요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.'); const v = inp.value.trim(); if (!v) return; T.g.whatif.push(v.slice(0, 60)); saveGame(); renderBoard(); pushConfig(); close(); };
+    const ok = () => { if (!canAsk) return toast('진행 중인 질문판이 아니에요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.'); const v = inp.value.trim(); if (!v) return; T.g.whatif.push(v.slice(0, 60)); T.view = null; saveGame(); renderBoard(); pushConfig(); close(); };
     ov.querySelector('[data-a=ok]').onclick = ok; inp.onkeydown = e => { if (e.key === 'Enter') ok(); };
   });
 }
@@ -1374,7 +1416,7 @@ function exportRows() {
   });
 }
 function countLines() {
-  const s0 = stageStats(0), cs = changeSummary(), L = [`- 처음 생각(학생 수): ${T.g.left} ${s0.L}명, ${T.g.right} ${s0.R}명`];
+  const s0 = stageStats(0), cs = changeSummary(latestStage(T.g)), L = [`- 처음 생각(학생 수): ${T.g.left} ${s0.L}명, ${T.g.right} ${s0.R}명`];
   if (cs) L.push(`- 만약에 생각(학생 수): ${T.g.left} ${cs.sk.L}명, ${T.g.right} ${cs.sk.R}명 (참여 ${cs.sk.n}/${cs.all}명)`, `- 변화(학생 수): 쪽이 바뀜 ${cs.side}명, 세기만 바뀜 ${cs.str}명, 그대로 ${cs.same}명, 새 근거만 ${cs.fresh}명, 아직 안 보냄 ${cs.wait}명`);
   L.push('- 학생 수는 학생마다 그 단계의 카드 1장으로 셈(만약에는 처음 생각과 이어진 카드 우선, 없으면 가장 최근 카드. 세기 무관, 숨긴 카드 제외)');
   return L;
@@ -1924,7 +1966,7 @@ window.addEventListener('pageshow', e => { if (e.persisted) onPageReturn(); }); 
 window.addEventListener('online', onPageReturn);
 window.TugData={migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
   // 폰 교사 화면·연결 안정화 시험용 순수 함수
-  isPhoneBoard,isPhoneLandscape,phoneBoardModel,WF_GONE,whatifList,latestStage,whatifCardCount,editWhatif,canDeleteWhatif,deleteWhatif,phoneRowView,phoneBoardHTML,codeClashLoser,autoResendPlan,MAX_AUTO_REVIVES,RETURN_JITTER_MS,RETURN_GAP_MS};
+  isPhoneBoard,isPhoneLandscape,phoneBoardModel,WF_GONE,whatifList,latestStage,whatifCardCount,editWhatif,canDeleteWhatif,deleteWhatif,validStage,phoneRowView,phoneBoardHTML,codeClashLoser,autoResendPlan,MAX_AUTO_REVIVES,RETURN_JITTER_MS,RETURN_GAP_MS};
 
 </script>
 </body>
