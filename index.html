@@ -213,6 +213,24 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #s-send-status[data-state="arrived"]{color:#16713c}#s-send{min-width:100px}
 #student-view .mycards .m{flex-wrap:wrap}#student-view .mycards .acts{flex-wrap:wrap}
 @media(max-width:360px){#student-view.wrap{padding:18px 12px 36px}#student-view .panel{padding:14px}}
+/* 학생 화면 질문 카드: 질문이 화면 제목이 아니라 '지금 생각할 것'으로 먼저 보이게 한다. 색은 양쪽 끝(파랑·빨강)·만약에(노랑)와 겹치지 않는 남색만 쓴다. */
+#student-view .s-q{background:var(--ink);color:#fff;border-radius:16px;padding:10px 16px 13px;font-size:24px;line-height:1.35;margin:0 0 12px;word-break:keep-all;overflow-wrap:anywhere}
+#student-view .s-q::before{content:"질문";display:block;font-size:14px;font-weight:700;color:#d5dbe6;margin-bottom:2px}
+#student-view .s-q.long{font-size:21px}
+#student-view h2{font-size:18px}
+@media(max-width:520px){#student-view.wrap{padding-top:16px}}
+/* 만약에가 뜨면 질문과 한 덩어리로 붙이고, 지금 답할 만약에 문구를 더 크게 */
+#student-view.has-wf .s-q{font-size:18px;border-radius:16px 16px 0 0;margin-bottom:0;padding-bottom:10px}
+#student-view .s-wf{margin:0 0 12px;padding:10px 16px 12px;border-radius:0 0 16px 16px;border-top:0;word-break:keep-all;overflow-wrap:anywhere}
+#student-view .s-wf .wf-l{display:block;font-size:14px;font-weight:700;color:#8a6d00;margin-bottom:2px}
+#student-view .s-wf .wf-t{display:block;font-size:22px;font-weight:800;line-height:1.35}
+#student-view .s-wf .note{font-size:13px}
+/* 근거 칸 바로 위에 지금 답하는 질문을 한 번 더(문서 흐름 안 — 키보드가 올라와도 근거 칸과 함께 보인다) */
+.s-q-echo{margin:0 0 8px;padding:7px 11px;border-radius:8px;background:#eef0f4;font-size:15px;font-weight:700;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere}
+.s-q-echo small{font-size:13px;font-weight:700;color:var(--sub);margin-right:6px}
+.s-q-echo .e-main{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.s-q-echo .e-q{display:block;font-size:13px;font-weight:600;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-q-echo.wf{background:#fff8db}.s-q-echo.wf small{color:#8a6d00}
 
 /* ---------- 휴대폰 교사 화면 ----------
    renderBoard가 창 폭 640px 이하이거나 가로로 돌린 휴대폰(isPhoneBoard)일 때 #board-view에 .phone을 붙인다(가로일 때는 .land도). 넓은 화면에는 아래 규칙이 걸리지 않는다. */
@@ -447,6 +465,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
       </div>
     </details>
     <div class="s-composer" id="s-composer">
+      <p class="s-q-echo" id="s-q-echo"></p>
       <div class="field"><label for="s-text">근거 <span class="note">· 60자까지</span></label>
         <textarea id="s-text" rows="2" maxlength="60" aria-describedby="s-compose-help s-send-status" placeholder="왜 그렇게 생각하나요? 핵심만 짧게"></textarea>
         <div class="note" id="s-compose-help">Enter는 줄바꿈이에요. 다 쓴 뒤 보내기를 눌러요.</div>
@@ -1702,8 +1721,10 @@ function renderStudent() {
   if (S.from && !curStage()) resetForm();
   $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
   $('#s-q').textContent = c.question;
+  $('#s-q').classList.toggle('long', (c.question || '').length > 30); $('#student-view').classList.toggle('has-wf', !!c.whatif);
   $('#s-wf').classList.toggle('hide', !c.whatif);
-  $('#s-wf').innerHTML = c.whatif ? `그런데 만약에? ${esc(c.whatif)}<div class="note" style="font-weight:500;margin-top:4px">아래 ‘처음 생각’을 그대로 둘지, 자리를 옮길지 정해요. 새 근거를 보내도 돼요.</div>` : '';
+  $('#s-wf').innerHTML = c.whatif ? `<span class="wf-l">그런데 만약에?</span><span class="wf-t">${esc(c.whatif)}</span><div class="note" style="font-weight:500;margin-top:4px">아래 ‘처음 생각’을 그대로 둘지, 자리를 옮길지 정해요. 새 근거를 보내도 돼요.</div>` : '';
+  { const e = $('#s-q-echo'), k = (c.whatif || '') + '\n' + c.question; if (e.dataset.k !== k) { e.dataset.k = k; e.classList.toggle('wf', !!c.whatif); e.innerHTML = c.whatif ? `<span class="e-q">${esc(c.question)}</span><span class="e-main"><small>그런데 만약에?</small>${esc(c.whatif)}</span>` : `<span class="e-main"><small>질문</small>${esc(c.question)}</span>`; } }
   $('#s-rope-left').textContent=c.left; $('#s-rope-right').textContent=c.right;
   $('#s-sideL').textContent = '◀ ' + c.left; $('#s-sideR').textContent = c.right + ' ▶';
   $('#s-form-title').textContent = formTitle();
