@@ -173,7 +173,27 @@ h2{font-size:20px;margin:0 0 12px}
 .friends button.on{background:#ffe3ec;border-color:#d6336c;color:#d6336c;font-weight:800}
 @media (max-width:520px){.ends,.bigbtns{grid-template-columns:1fr}.qrbox .bigcode{font-size:48px}}
 @media print{.topbar .tools,.selbar{display:none!important}}
-.card.repositioned{box-shadow:inset 5px 0 #7c3aed}.card .moved{color:#6d28d9;background:#f3e8ff}.text-edit{color:#6b7280;font-size:12px}#links{pointer-events:none}#t-activate{font-weight:700}</style>
+.card.repositioned{box-shadow:inset 5px 0 #7c3aed}.card .moved{color:#6d28d9;background:#f3e8ff}.text-edit{color:#6b7280;font-size:12px}#links{pointer-events:none}#t-activate{font-weight:700}
+/* 학생 작성 영역만: 입력과 전송은 문서 흐름 안에 둔다(모바일 키보드 가림 방지). */
+#student-view{min-width:0}
+#student-view .panel{min-width:0}
+#student-view .s-q,#student-view .note,#student-view h2{overflow-wrap:anywhere}
+#student-view button,#student-view summary,#student-view .slider{min-height:44px}
+#student-view .sidebtns{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#student-view .sidebtns button{min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+.s-rope-ends{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;font-weight:700;font-size:14px;overflow-wrap:anywhere}
+.s-rope-ends span:first-child{color:var(--L)}.s-rope-ends span:last-child{color:var(--R);text-align:right}
+#s-rope-help{margin:0 0 8px}.s-selection{margin:6px 0 0;font-weight:700}
+.s-fallback{border:1px solid var(--line);border-radius:10px;margin:0 0 16px;padding:0 10px}
+.s-fallback summary{padding:12px 0;cursor:pointer;font-weight:700;line-height:1.4}
+.s-fallback .field{margin-top:10px}
+#s-text{font-size:16px;line-height:1.5;min-height:72px;resize:vertical;display:block}
+.s-composer .field{margin-bottom:8px}.s-submit-row{display:flex;gap:8px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#s-send-status{flex:1 1 180px;margin:0;min-width:0}#s-send-status[data-state="failed"]{color:#a12c23;font-weight:700}
+#s-send-status[data-state="arrived"]{color:#16713c}#s-send{min-width:100px}
+#student-view .mycards .m{flex-wrap:wrap}#student-view .mycards .acts{flex-wrap:wrap}
+@media(max-width:360px){#student-view.wrap{padding:18px 12px 36px}#student-view .panel{padding:14px}}
+</style>
 </head>
 <body>
 
@@ -275,21 +295,30 @@ h2{font-size:20px;margin:0 0 12px}
   <div class="s-wf hide" id="s-wf"></div>
   <div class="panel">
     <h2 id="s-form-title">내 근거 보내기</h2>
-    <div class="field"><label for="s-text">근거 한 줄</label>
-      <input type="text" id="s-text" maxlength="60" placeholder="왜 그렇게 생각하나요? 핵심만 짧게"></div>
-    <div class="field"><label>줄 위에 내 근거를 놓아요 <span class="note" style="font-weight:500">· 카드를 끌거나 줄을 눌러요</span></label>
+    <div class="field"><label id="s-rope-label">줄 위에 내 근거를 놓아요</label>
+      <p class="note" id="s-rope-help">카드를 끌거나 줄을 눌러 쪽과 세기를 정해요. 근거를 먼저 써도 괜찮아요.</p>
+      <div class="s-rope-ends"><span id="s-rope-left"></span><span id="s-rope-right"></span></div>
       <div class="mrope" id="s-mrope" aria-hidden="true"><div class="pr"></div><div class="pf"></div><div class="ghost hide" id="s-ghost"></div><div class="tok unset" id="s-tok">내 근거</div></div>
       <div class="ghost-note hide" id="s-ghost-note">점선 ○은 처음 자리예요.</div>
+      <p class="note s-selection" id="s-selection">아직 쪽을 고르지 않았어요.</p>
     </div>
-    <div class="field"><label>어느 쪽으로 당길까요?</label>
-      <div class="sidebtns"><button class="L" id="s-sideL"></button><button class="R" id="s-sideR"></button></div></div>
-    <div class="field"><label for="s-str">얼마나 세게 당길까요? <b id="s-strv">3</b></label>
-      <input type="range" class="slider" id="s-str" min="1" max="5" step="1" value="3">
-      <div class="strlabels"><span>1 살짝</span><span>3 보통</span><span>5 아주 세게</span></div>
-    </div>
-    <div class="row" style="justify-content:flex-end">
-      <button id="s-cancel-edit" class="hide">취소</button>
-      <button id="s-send" class="primary" disabled>보내기</button>
+    <details class="s-fallback"><summary>버튼으로 쪽·세기 조절</summary>
+      <div class="field"><label id="s-side-label">어느 쪽으로 당길까요?</label>
+        <div class="sidebtns" role="group" aria-labelledby="s-side-label"><button class="L" id="s-sideL" aria-pressed="false"></button><button class="R" id="s-sideR" aria-pressed="false"></button></div></div>
+      <div class="field"><label for="s-str">얼마나 세게 당길까요? <b id="s-strv">3</b></label>
+        <input type="range" class="slider" id="s-str" min="1" max="5" step="1" value="3">
+        <div class="strlabels"><span>1 살짝</span><span>3 보통</span><span>5 아주 세게</span></div>
+      </div>
+    </details>
+    <div class="s-composer" id="s-composer">
+      <div class="field"><label for="s-text">근거 <span class="note">· 60자까지</span></label>
+        <textarea id="s-text" rows="2" maxlength="60" aria-describedby="s-compose-help s-send-status" placeholder="왜 그렇게 생각하나요? 핵심만 짧게"></textarea>
+        <div class="note" id="s-compose-help">Enter는 줄바꿈이에요. 다 쓴 뒤 보내기를 눌러요.</div>
+      </div>
+      <div class="s-submit-row">
+        <p class="note" id="s-send-status" role="status" aria-live="polite" aria-atomic="true">쪽을 고르고 근거를 적으면 보낼 수 있어요.</p>
+        <div class="row"><button id="s-cancel-edit" class="hide">취소</button><button id="s-send" class="primary" aria-describedby="s-send-status" disabled>보내기</button></div>
+      </div>
     </div>
   </div>
   <div class="panel">
@@ -891,7 +920,7 @@ function exportRoom(){modal('<h2>수업 저장(JSON)</h2><p>교사 개인 보관
 function importRoom(){modal('<h2>저장한 수업 불러오기</h2><p class="note">JSON만, 최대 10MB. 원본을 덮어쓰지 않고 별도 보관 사본으로 열어요. 재개 전에는 오프라인 열람입니다.</p><label for="room-file">교사 수업 백업 파일 선택</label><input id="room-file" type="file" accept=".json,application/json"><p role="status" data-status></p><div class="actions"><button data-close>닫기</button><button data-import disabled>별도 사본으로 열기</button></div>',(ov,close)=>{let candidate=null;const status=ov.querySelector('[data-status]'),go=ov.querySelector('[data-import]');ov.querySelector('[data-close]').onclick=close;ov.querySelector('#room-file').onchange=async e=>{candidate=null;go.disabled=true;try{const file=e.target.files[0];if(!file)return;if(file.size>10*1024*1024)throw Error('10MB보다 큰 파일입니다.');const raw=JSON.parse(await file.text());candidate=validateBackup(raw);status.textContent='질문: '+candidate.boards.slice(0,3).map((b,i)=>(i+1)+'. '+(b.deletedAt!==undefined?'[휴지통] ':'')+b.question).join(' / ')+(candidate.boards.length>3?' 외 '+(candidate.boards.length-3)+'개':'')+' · '+candidate.boards.length+'개 질문판 · '+candidate.boards.reduce((n,b)=>n+b.cards.length,0)+'장 · 저장 '+new Date(raw.exportedAt).toLocaleString('ko-KR')+' · 이름과 숨긴 기록을 포함한 교사 비공개 백업입니다.';go.disabled=false;}catch(err){status.textContent=err.message;}};go.onclick=()=>{if(!candidate)return;candidate.storageId=uid();candidate.offline=true;delete candidate.legacySource;LS.set(roomKey(candidate.storageId),candidate);openRoom(candidate);close();};});}
 
 /* =================== 학생 =================== */
-const S = { restoring:false, code: '', me: null, cfg: null, chs: [], joinId: null, side: null, editing: null, from: null, pending: {}, connected: false };
+const S = { restoring:false, code: '', me: null, cfg: null, chs: [], joinId: null, side: null, editing: null, from: null, target: null, pending: {}, connected: false };
 // 학생 기록은 코드+이름별로 저장한다(한 기기에서 여러 학생이 들어가도 섞이지 않게). 탭마다 마지막 이름은 sessionStorage에.
 const meKey = (code, name) => 'tow:me:' + code + ':' + name;
 const nameKey = code => 'tow:name:' + code;
@@ -915,7 +944,7 @@ $('#j-go').onclick = () => {
 };
 $('#j-name').onkeydown = e => { if (e.key === 'Enter') $('#j-go').click(); };
 function joinGame(code, name) {
-  S.code = code; S.cfg=null;
+  S.code = code; S.cfg=null; S.pending={}; S.target=null;
   S.me = loadMe(code, name) || { sid: uid(), cards: [], likes: [] };
   S.me.name = name; saveMe();
   history.replaceState(null, '', '?c=' + code);
@@ -943,7 +972,7 @@ function joinGame(code, name) {
     openChannel(topicMe(code, S.me.sid), {
       config: onCfg,
       refresh:p=>toast(p.message||'새로고침해 주세요.',6000),
-      ack: p => { const c = S.me.cards.find(x => x.id === p.id && x.boardId===p.boardId); if (c && (p.rev ?? 0) >= c.rev) { c.ok = true; saveMe(); delete S.pending[p.id]; renderMine(); } },
+      ack: p => { if(S.joinId===joinId) acknowledgeCard(p); },
     }, st => {
       S.connected = st === 'SUBSCRIBED'; $('#s-dot').classList.toggle('on', S.connected);
       if (S.connected) { hello(); if(S.cfg)resendPending(); }
@@ -958,8 +987,41 @@ function joinGame(code, name) {
 }
 function enterStudent() { $('#j-go').disabled=false; show('student-view'); restoreDraft(); renderStudent(); }
 function myBoardCards(){return S.me?.cards.filter(c=>c.boardId===S.cfg?.boardId)||[];}
-function saveDraft(){if(!S.me||!S.cfg||S.restoring)return;S.me.drafts ||= {};S.me.drafts[S.cfg.boardId]={text:$('#s-text').value,strength:+$('#s-str').value,side:S.side,editing:S.editing,from:S.from,stage:curStage()};saveMe();}
-function restoreDraft(){S.restoring=true;const d=S.me?.drafts?.[S.cfg?.boardId];resetForm();if(d){$('#s-text').value=d.text||'';$('#s-str').value=d.strength||3;S.editing=myBoardCards().some(c=>c.id===d.editing&&stOf(c)===curStage())?d.editing:null;S.from=curStage()&&myBoardCards().some(c=>c.id===d.from&&stOf(c)===0)?d.from:null;setSide(d.side||null);$('#s-form-title').textContent=formTitle();$('#s-send').textContent=S.editing?'다시 보내기':'보내기';$('#s-cancel-edit').classList.toggle('hide',!S.editing&&!S.from);}S.restoring=false;}
+// Only these extra fields are local student state; the teacher card payload stays unchanged.
+function composerDraft(){return {text:$('#s-text').value,strength:+$('#s-str').value,side:S.side,editing:S.editing,from:S.from,stage:curStage()};}
+function draftSignature(d){return JSON.stringify([d.text,d.side,d.strength,d.editing||null,d.from||null,d.stage||0]);}
+function submissionKey(boardId,id){return boardId+':'+id;}
+function submissionFor(id,boardId=S.cfg?.boardId){return S.me?.submissions?.[submissionKey(boardId,id)];}
+function activeSubmission(){return submissionFor(S.editing||S.target);}
+function saveDraft(){if(!S.me||!S.cfg||S.restoring)return;S.me.drafts ||= {};S.me.drafts[S.cfg.boardId]={...composerDraft(),target:S.target};saveMe();}
+function restoreDraft(){
+  S.restoring=true;const d=S.me?.drafts?.[S.cfg?.boardId];resetForm();
+  if(d){$('#s-text').value=d.text||'';$('#s-str').value=d.strength||3;
+    S.editing=myBoardCards().some(c=>c.id===d.editing&&stOf(c)===curStage())?d.editing:null;
+    S.from=curStage()&&myBoardCards().some(c=>c.id===d.from&&stOf(c)===0)?d.from:null;
+    S.target=myBoardCards().some(c=>c.id===d.target&&stOf(c)===curStage())?d.target:null;
+    setSide(d.side||null);$('#s-form-title').textContent=formTitle();$('#s-cancel-edit').classList.toggle('hide',!S.editing&&!S.from&&!S.target);
+  }
+  S.restoring=false;renderComposerStatus();
+}
+function sameSubmission(d,meta){
+  const old=meta?.snapshot;return !!old&&d.text.trim().slice(0,60)===old.text.trim().slice(0,60)&&d.side===old.side&&d.strength===old.strength&&(d.from||null)===(old.from||null)&&(d.stage||0)===(old.stage||0);
+}
+function composerState(d,meta,live){
+  const identical=!!meta&&(meta.signature===draftSignature(d)||sameSubmission(d,meta));
+  if(identical&&meta.state==='sending'&&live)return {state:'sending',disabled:true,label:'보내는 중…',message:'선생님 화면에 도착하는지 확인 중이에요. 다른 내용을 쓰거나 위치를 바꿀 수 있어요.'};
+  if(!d.side||!d.text.trim())return {state:meta?.state==='arrived'?'arrived':'incomplete',disabled:true,label:'보내기',message:(meta?.state==='arrived'?'도착했어요. ':'')+(!d.side&&!d.text.trim()?'쪽을 고르고 근거를 적으면 보낼 수 있어요.':!d.side?'아직 쪽을 고르지 않았어요. 줄이나 버튼으로 쪽을 골라 주세요.':'근거를 적으면 보낼 수 있어요.')};
+  if(identical&&meta.state!=='arrived')return {state:'failed',disabled:false,label:'재전송',message:'도착을 확인하지 못했어요. 원문과 위치는 남아 있어요. 재전송을 눌러 주세요.'};
+  return {state:identical&&meta?.state==='arrived'?'arrived':'ready',disabled:false,label:d.editing?'다시 보내기':'보내기',message:identical&&meta?.state==='arrived'?'도착했어요.': '선택한 쪽과 세기를 확인하고 보내 주세요.'};
+}
+function renderComposerStatus(){
+  const meta=activeSubmission(), key=meta&&submissionKey(meta.boardId,meta.id), live=!!(key&&S.pending[key]);
+  const state=composerState(composerDraft(),meta,live), b=$('#s-send'), status=$('#s-send-status');
+  b.disabled=state.disabled;b.textContent=state.label;status.dataset.state=state.state;status.textContent=(S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value+'. ':'')+state.message;
+  $('#s-selection').textContent=S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value:'아직 쪽을 고르지 않았어요.';
+  $('#s-sideL').setAttribute('aria-pressed',String(S.side==='L'));$('#s-sideR').setAttribute('aria-pressed',String(S.side==='R'));
+  $('#s-str').setAttribute('aria-valuetext','세기 '+$('#s-str').value);
+}
 function curStage() { return S.cfg?.stage || 0; }
 function formTitle() { return S.editing ? '내 근거 다시 놓기' : S.from ? '만약에 생각 놓기' : curStage() ? '만약에 생각 보내기' : '내 근거 보내기'; }
 function renderStudent() {
@@ -970,6 +1032,7 @@ function renderStudent() {
   $('#s-q').textContent = c.question;
   $('#s-wf').classList.toggle('hide', !c.whatif);
   $('#s-wf').innerHTML = c.whatif ? `그런데 만약에? ${esc(c.whatif)}<div class="note" style="font-weight:500;margin-top:4px">아래 ‘처음 생각’을 그대로 둘지, 자리를 옮길지 정해요. 새 근거를 보내도 돼요.</div>` : '';
+  $('#s-rope-left').textContent=c.left; $('#s-rope-right').textContent=c.right;
   $('#s-sideL').textContent = '◀ ' + c.left; $('#s-sideR').textContent = c.right + ' ▶';
   $('#s-form-title').textContent = formTitle();
   renderMine(); renderFriends(); updatePreview();
@@ -977,7 +1040,7 @@ function renderStudent() {
 function sideLabel(s) { return s === 'L' ? S.cfg?.left : S.cfg?.right; }
 function mineItem(c, extra) {
   const li = document.createElement('li'); li.className = c.side;
-  li.innerHTML = `${esc(c.text)}<div class="m"><span>${esc(sideLabel(c.side) || '')} 쪽 · 세기 ${c.strength} · ${c.ok ? '<span class="okmark">✓ 도착</span>' : '<span class="waitmark">보내는 중…</span>'}</span><span class="acts"></span></div>` + (extra || '');
+  li.innerHTML = `${esc(c.text)}<div class="m"><span>${esc(sideLabel(c.side) || '')} 쪽 · 세기 ${c.strength} · ${c.ok ? '<span class="okmark">✓ 도착</span>' : '<span class="waitmark">'+(S.pending[submissionKey(c.boardId,c.id)]?'보내는 중…':'미도착 · 다시 놓기로 재전송')+'</span>'}</span><span class="acts"></span></div>` + (extra || '');
   return li;
 }
 function renderMine() {
@@ -1010,14 +1073,19 @@ function renderMine() {
   section('앞선 만약에 생각', older, c => { const li = mineItem(c); li.classList.add('past'); return li; });
 }
 function keepSame(id) {
-  const p = myBoardCards().find(x => x.id === id); if (!p) return;
-  const c = { id: uid(), boardId:S.cfg.boardId, text: p.text, side: p.side, strength: p.strength, rev: 0, ok: false, stage: curStage(), from: p.id };
-  S.me.cards.push(c); saveMe(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('처음 생각 그대로 보냈어요');
+  const p=myBoardCards().find(x=>x.id===id);if(!p||!curStage())return;
+  // This shortcut acts on the source card, never on a separate in-progress composer draft.
+  const child=myBoardCards().find(c=>c.from===id&&stOf(c)===curStage());
+  if(child){if(!child.ok)sendCard(child);return;}
+  const c={id:uid(),boardId:S.cfg.boardId,text:p.text,side:p.side,strength:p.strength,rev:0,ok:false,stage:curStage(),from:p.id};
+  S.me.cards.push(c);S.me.submissions ||= {};
+  S.me.submissions[submissionKey(c.boardId,c.id)]={id:c.id,boardId:c.boardId,rev:c.rev,signature:null,snapshot:null,state:'sending',attempts:0};
+  saveMe();sendCard(c);toast('처음 생각 그대로 보냈어요');
 }
 function startFrom(id) {
   const p = myBoardCards().find(x => x.id === id); if (!p) return;
-  S.editing = null; S.from = id; $('#s-text').value = p.text; $('#s-str').value = p.strength; setSide(p.side);
-  $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.remove('hide');
+  S.target=null; S.editing = null; S.from = id; $('#s-text').value = p.text; $('#s-str').value = p.strength; setSide(p.side);
+  $('#s-form-title').textContent = formTitle(); $('#s-cancel-edit').classList.remove('hide');renderComposerStatus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function renderFriends() {
@@ -1071,34 +1139,65 @@ function updatePreview() {
   const orig = S.me && myBoardCards().find(x => x.id === (S.from || S.editing));
   $('#s-ghost').classList.toggle('hide', !orig); $('#s-ghost-note').classList.toggle('hide', !orig);
   if (orig) $('#s-ghost').style.left = mX(orig.side, orig.strength) + '%';
-  $('#s-send').disabled = !(S.side && $('#s-text').value.trim()); saveDraft();
+  saveDraft(); renderComposerStatus();
 }
-function resetForm() { $('#s-text').value = ''; $('#s-str').value = 3; S.editing = null; S.from = null; setSide(null); $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.add('hide'); saveDraft(); }
+function resetForm() { S.target=null; $('#s-text').value = ''; $('#s-str').value = 3; S.editing = null; S.from = null; setSide(null); $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '보내기'; $('#s-cancel-edit').classList.add('hide'); saveDraft(); }
 function startEdit(id) {
   const c = myBoardCards().find(x => x.id === id); if (!c) return;
-  S.editing = id; S.from = null; $('#s-text').value = c.text; $('#s-str').value = c.strength; setSide(c.side);
-  $('#s-form-title').textContent = formTitle(); $('#s-send').textContent = '다시 보내기'; $('#s-cancel-edit').classList.remove('hide');
+  S.target=id; S.editing = id; S.from = null; $('#s-text').value = c.text; $('#s-str').value = c.strength; setSide(c.side);
+  $('#s-form-title').textContent = formTitle(); $('#s-cancel-edit').classList.remove('hide');renderComposerStatus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+// One bounded retry chain per board/card/revision. A new revision invalidates old callbacks.
 function sendCard(c) {
-  if(!S.cfg||!S.me.cards.includes(c)||!c.boardId)return;
-  const session=S.joinId, owner=S.me; S.pending[c.id] = (S.pending[c.id] || 0) + 1;
-  toTeacher('card', { boardId:c.boardId,configSeq:S.cfg?.configSeq,id: c.id, sid: S.me.sid, name: S.me.name, text: c.text, side: c.side, strength: c.strength, rev: c.rev, stage: stOf(c), from: c.from || null });
-  setTimeout(() => { if(S.joinId!==session||S.me!==owner)return; const cc = S.me.cards.find(x => x.id === c.id && x.boardId===c.boardId); if (cc && !cc.ok && S.pending[c.id] && S.pending[c.id] < 6) sendCard(cc); }, 3000);
+  if(!S.cfg||!S.me.cards.includes(c)||!c.boardId||c.ok)return;
+  const key=submissionKey(c.boardId,c.id);if(S.pending[key])return;
+  S.me.submissions ||= {};
+  const meta=S.me.submissions[key] ||= {id:c.id,boardId:c.boardId,rev:c.rev,signature:null,snapshot:null};
+  meta.rev=c.rev;meta.state='sending';meta.attempts=0;
+  const run={session:S.joinId,owner:S.me,rev:c.rev,attempts:0};S.pending[key]=run;
+  const valid=()=>S.joinId===run.session&&S.me===run.owner&&S.pending[key]===run&&c.rev===run.rev&&!c.ok;
+  const attempt=()=>{
+    if(!valid())return;run.attempts++;meta.attempts=run.attempts;saveMe();
+    toTeacher('card',{boardId:c.boardId,configSeq:S.cfg?.configSeq,id:c.id,sid:S.me.sid,name:S.me.name,text:c.text,side:c.side,strength:c.strength,rev:c.rev,stage:stOf(c),from:c.from||null});
+    setTimeout(()=>{if(!valid())return;if(run.attempts<6)attempt();else {delete S.pending[key];meta.state='failed';saveMe();renderMine();renderComposerStatus();}},3000);
+  };
+  attempt();renderMine();renderComposerStatus();
 }
-function resendPending() { for (const c of S.me.cards) if (!c.ok) { S.pending[c.id] = 0; sendCard(c); } }
-function resendStalled() { for (const c of S.me.cards) if (!c.ok && !(S.pending[c.id] > 0 && S.pending[c.id] < 6)) { S.pending[c.id] = 0; sendCard(c); } }
-$('#s-sideL').onclick = () => setSide('L'); $('#s-sideR').onclick = () => setSide('R');
-$('#s-str').oninput = updatePreview; $('#s-text').oninput = updatePreview;
-$('#s-text').onkeydown = e => { if (e.key === 'Enter' && !$('#s-send').disabled) $('#s-send').click(); };
-$('#s-cancel-edit').onclick = resetForm;
-$('#s-send').onclick = () => {
-  const text = $('#s-text').value.trim().slice(0, 60), strength = +$('#s-str').value; if (!text || !S.side) return;
-  let c;
-  if (S.editing) { c = myBoardCards().find(x => x.id === S.editing); if(!c)return; const changed=c.text!==text||c.side!==S.side||c.strength!==strength; Object.assign(c,{text,side:S.side,strength,rev:c.rev+(changed?1:0),ok:false}); }
-  else { c = { id: uid(), boardId:S.cfg.boardId, text, side: S.side, strength, rev: 0, ok: false, stage: curStage(), from: S.from || null }; S.me.cards.push(c); }
-  saveMe(); resetForm(); renderMine(); S.pending[c.id] = 0; sendCard(c); toast('보냈어요');
-};
+function acknowledgeCard(p){
+  const c=S.me?.cards.find(x=>x.id===p.id&&x.boardId===p.boardId);
+  if(!c||(p.rev??0)<c.rev)return;
+  const key=submissionKey(c.boardId,c.id),meta=submissionFor(c.id,c.boardId);
+  c.ok=true;delete S.pending[key];if(meta)meta.state='arrived';
+  // Clear only this exact draft on this exact board. Never overwrite newer typing or another board.
+  const active=S.cfg?.boardId===c.boardId;
+  const draft=active?composerDraft():null;
+  if(active&&(S.editing||S.target)===c.id&&meta?.signature&&draft&&draftSignature(draft)===meta.signature){
+    if(active){resetForm();$('#s-send-status').dataset.state='arrived';$('#s-send-status').textContent='도착했어요. 새 근거를 보낼 수 있어요.';}
+  }
+  saveMe();renderMine();if(active&&draftSignature(composerDraft())!==draftSignature({text:'',side:null,strength:3,editing:null,from:null,stage:curStage()}))renderComposerStatus();
+}
+// Reconnect/config may revive interrupted persisted sends, but a six-attempt failure waits for a human retry.
+function resendPending(){resendStalled();}
+function resendStalled(){
+  for(const c of S.me.cards)if(!c.ok){const key=submissionKey(c.boardId,c.id),meta=submissionFor(c.id,c.boardId);if(!S.pending[key]&&meta?.state!=='failed')sendCard(c);}
+}
+$('#s-sideL').onclick=()=>setSide('L');$('#s-sideR').onclick=()=>setSide('R');
+$('#s-str').oninput=updatePreview;$('#s-text').oninput=updatePreview;
+// No Enter shortcut: textarea Enter and Korean IME composition never submit.
+$('#s-cancel-edit').onclick=resetForm;
+function submitComposer(){
+  if(!S.cfg||!S.me)return;
+  const d=composerDraft(),text=d.text.trim().slice(0,60);if(!text||!d.side)return;
+  let c=myBoardCards().find(x=>x.id===(d.editing||S.target)&&stOf(x)===d.stage);
+  const signature=draftSignature(d),old=c&&submissionFor(c.id,c.boardId);
+  if(c&&old&&(old.signature===signature||sameSubmission(d,old))&&S.pending[submissionKey(c.boardId,c.id)])return;
+  if(c){const changed=c.text!==text||c.side!==d.side||c.strength!==d.strength;Object.assign(c,{text,side:d.side,strength:d.strength,rev:c.rev+(changed?1:0),ok:false});delete S.pending[submissionKey(c.boardId,c.id)];}
+  else {c={id:uid(),boardId:S.cfg.boardId,text,side:d.side,strength:d.strength,rev:0,ok:false,stage:d.stage,from:d.from||null};S.me.cards.push(c);}
+  S.target=c.id;S.me.submissions ||= {};S.me.submissions[submissionKey(c.boardId,c.id)]={id:c.id,boardId:c.boardId,rev:c.rev,signature,snapshot:d,state:'sending',attempts:0};
+  saveDraft();saveMe();$('#s-cancel-edit').classList.remove('hide');sendCard(c);
+}
+$('#s-send').onclick=submitComposer;
 $('#s-leave').onclick = () => { saveDraft(); leaveChannels(); S.joinId = null; history.replaceState(null, '', location.pathname); openJoin(''); };
 
 /* =================== 시작 =================== */
