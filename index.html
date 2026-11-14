@@ -451,6 +451,9 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #s-continuation{gap:8px;margin:0 0 14px;flex-wrap:nowrap;align-items:stretch}
 #s-continuation button{flex:1 1 0;min-width:0;white-space:normal;word-break:keep-all;line-height:1.3;font-weight:700;padding:10px 8px}
 #s-completed{margin:0 0 12px}
+/* 학생 화면 이름표: 교사 창과 학생 창을 함께 열어도 바로 가릴 수 있게 한다(도구 모음 막대의 이름표와 같은 색) */
+.role-badge{display:inline-block;vertical-align:middle;margin-right:8px;padding:3px 10px;border-radius:999px;background:#ffe27a;color:#3b2f00;font-size:13px;font-weight:800;line-height:1.4;white-space:nowrap}
+h1 .role-badge{margin:0 0 0 8px;font-size:15px}
 </style>
 </head>
 <body>
@@ -547,7 +550,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 
 <!-- 학생 화면 -->
 <section id="join-view" class="wrap hide">
-  <h1>생각 줄다리기</h1>
+  <h1>생각 줄다리기<span class="role-badge">학생 화면</span></h1>
   <div class="panel">
     <div class="field"><label for="j-code">접속 코드</label><input type="text" id="j-code" inputmode="numeric" maxlength="4" placeholder="숫자 4자리"></div>
     <div class="field"><label for="j-name">번호 또는 별명</label><input type="text" id="j-name" maxlength="12" placeholder="예) 7번"></div>
@@ -560,7 +563,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 
 <section id="student-view" class="wrap hide">
   <div class="row" style="justify-content:space-between;margin-bottom:8px">
-    <span class="note"><span class="dot" id="s-dot"></span><span id="s-who"></span></span>
+    <span class="note"><span class="role-badge">학생 화면</span><span class="dot" id="s-dot"></span><span id="s-who"></span></span>
     <button id="s-leave" style="font-size:13px;padding:4px 10px">나가기</button>
   </div>
   <p class="s-q" id="s-q"></p>
