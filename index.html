@@ -50,6 +50,19 @@ h2{font-size:20px;margin:0 0 12px}
 .tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .tools button{padding:6px 10px;font-size:14px}
 .tools button.on{background:var(--ink);color:#fff}
+/* 넓은 화면 도구 줄 정리(2026-11-14): 수업 중 누르는 단추만 줄에 두고, 「보기 설정」은 펼침 패널, 「저장·내보내기」는 창으로 모은다.
+   기능은 그대로이고 자리만 옮겼다. 휴대폰 분기(#board-view.phone)에서는 이 묶음을 통째로 숨겨 예전 네 단추 줄을 그대로 쓴다 */
+#board-view:not(.phone) .tools{flex:1 1 auto}
+.tools .tgap{flex:1 1 auto;min-width:0}
+.tgrp{position:relative;display:inline-flex}
+.tpop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:120;flex-direction:column;gap:6px;min-width:200px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 18px rgba(20,25,40,.14)}
+.tgrp.open .tpop{display:flex}
+.tpop button{text-align:left;white-space:nowrap}
+.tpop .tfs{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-left:10px;font-size:14px;color:#4b5263;white-space:nowrap}
+.tpop .tfs span{display:flex;gap:6px}
+/* 보는 질문판이 이미 진행 중이면 누를 일이 없으므로 단추 모양을 벗기고 글자로만 둔다(다른 판을 볼 때만 「이 질문 시작」 단추) */
+#board-view:not(.phone) #t-activate.now{border-color:transparent;background:none;padding-left:4px;padding-right:4px;cursor:default;pointer-events:none}
+#board-view.phone .tgrp,#board-view.phone .tgap,#board-view.phone #g-save{display:none}
 .whatif-bar{display:none;padding:8px 16px;background:#fff8db;border-bottom:1px solid #f0dc8c;font-weight:700;font-size:calc(18px * var(--fs,1))}
 .whatif-bar.show{display:block}
 #board-view.phone #t-mask,#board-view.phone #t-big{display:none}
@@ -294,8 +307,8 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #board-view.phone .tools{flex:1 1 100%;min-width:0;flex-wrap:nowrap;align-items:stretch}
 #board-view.phone .tools button{flex:1 1 0;min-width:0;min-height:44px;font-size:14px;line-height:1.25;padding:4px;word-break:keep-all}
 #board-view.phone #t-more{flex:0 0 44px;font-size:18px;padding:0}
-#board-view.phone #t-boards,#board-view.phone #t-newboard,#board-view.phone #t-json,#board-view.phone #t-import,
-#board-view.phone #t-names,#board-view.phone #t-count,#board-view.phone #t-export,
+#board-view.phone #t-boards,
+#board-view.phone #t-names,#board-view.phone #t-count,
 #board-view.phone #t-fontdown,#board-view.phone #t-fontup{display:none}
 #board-view.phone .whatif-bar{padding:8px 10px;font-size:16px;line-height:1.4;overflow-wrap:anywhere}
 #board-view.phone .whatif-bar small{display:none}
@@ -488,14 +501,21 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
     <span class="codechip" id="b-code" title="크게 보기">접속 코드 <b></b></span>
     <span class="status"><span class="dot" id="b-dot"></span><span id="b-count">0</span>장</span>
     <div class="tools">
-      <button id="t-boards">질문판 목록</button><button id="t-newboard">새 질문판</button><button id="t-activate">이 질문 시작</button><button id="t-resume">수업 재개</button><button id="t-json">수업 저장(JSON)</button><button id="t-import">저장한 수업 불러오기</button><button id="t-names">이름 보이기</button>
+      <button id="t-boards">질문판 목록</button><button id="t-activate">이 질문 시작</button><button id="t-resume">수업 재개</button>
       <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요)." aria-pressed="false">친구 근거: 꺼짐</button>
       <button id="t-whatif">그런데 만약에?</button>
-      <button id="t-mask" class="hide" title="켜 두면 큰 화면에 추가 질문 글과 만약에 생각이 보이지 않아요. 학생에게 가는 질문은 달라지지 않아요." aria-pressed="true">추가 질문 가리기: 켜짐</button>
       <button id="t-big" title="질문이나 양쪽 근거를 화면 가득 크게 보여요. Esc 또는 「판으로」로 돌아와요.">크게 보기</button>
-      <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
-      <button id="t-export">내보내기</button>
-      <button id="t-fontdown">가-</button><button id="t-fontup">가+</button>
+      <span class="tgap"></span>
+      <div class="tgrp" id="grp-view">
+        <button id="g-view" title="큰 화면에 무엇을 보일지 정해요. 추가 질문 가리기, 찬반 수, 이름 보이기, 글자 크기가 들어 있어요." aria-haspopup="true" aria-expanded="false">보기 설정 ▾</button>
+        <div class="tpop" id="pop-view">
+          <button id="t-mask" class="hide" title="켜 두면 큰 화면에 추가 질문 글과 만약에 생각이 보이지 않아요. 학생에게 가는 질문은 달라지지 않아요." aria-pressed="true">추가 질문 가리기: 켜짐</button>
+          <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
+          <button id="t-names">이름 보이기</button>
+          <div class="tfs">글자 크기<span><button id="t-fontdown">가-</button><button id="t-fontup">가+</button></span></div>
+        </div>
+      </div>
+      <button id="g-save" title="내보내기, 수업 저장(JSON), 저장한 수업 불러오기가 들어 있어요.">저장·내보내기</button>
       <button id="t-more">⋯</button>
     </div>
   </div>
@@ -664,6 +684,7 @@ function openChannel(topic, handlers, onStatus) {
 }
 function toast(msg, ms = 2200) { document.querySelectorAll('.toast').forEach(e => e.remove()); /* 새 알림이 뜨면 앞 알림은 지운다(같은 자리에 겹치지 않게) */ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
 function show(id) { for (const s of document.querySelectorAll('body > section')) s.classList.toggle('hide', s.id !== id);
+  const gv = document.querySelector('#grp-view'); if (gv) gv.classList.remove('open');
   if (id !== 'board-view') { T.big = null; const b = document.querySelector('#bigq'); if (b) { b.classList.add('hide'); b.innerHTML = ''; } }
   syncWake(); }
 function studentUrl(code) { return location.origin + location.pathname + '?c=' + code; }
@@ -1227,7 +1248,7 @@ function bigStep(d) { // ← → : 한 장 보기에서는 이전/다음 근거,
 function renderBoard() {
   const g = T.g; if (!g) return;
   const board = $('#board');
-  $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
+  $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#t-activate').classList.toggle('now',T.viewedBoardId===T.room.activeBoardId); $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
   const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=g.whatif.at(-1), paused=!wf&&initialLocked(g);
   const viewNote=[T.room.offline?'오프라인 보관':!responding?'보관판 열람':paused?'응답 잠시 멈춤':'',g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'이전 버전 여러 카드 보관':''].filter(Boolean).join(' · ');
@@ -1243,7 +1264,7 @@ function renderBoard() {
   mb.textContent = masked ? '추가 질문 가리기: 켜짐' : '추가 질문 가리기: 꺼짐'; mb.setAttribute('aria-pressed', String(masked));
   renderBig();
   $('#b-whatif').classList.toggle('show', masked||!!wf||paused);
-  $('#b-whatif').innerHTML=masked?'<span class="qh-meta"><span class="qh-label">추가 질문</span></span><span class="qh-paused">가려 두었어요 · 「추가 질문 가리기: 켜짐」을 누르면 추가 질문과 만약에 생각이 보여요.</span>':wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
+  $('#b-whatif').innerHTML=masked?'<span class="qh-meta"><span class="qh-label">추가 질문</span></span><span class="qh-paused">가려 두었어요 · 「보기 설정」에서 「추가 질문 가리기」를 끄면 추가 질문과 만약에 생각이 보여요.</span>':wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
   renderCounts(); renderStageBar();renderParticipants();
   const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
   // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
@@ -1615,7 +1636,7 @@ function askWhatif() {
   modal(`<h2>그런데 만약에?</h2><p class="note">추가 질문은 학생에게 <b>순서대로 하나씩</b> 공개돼요. 학생은 처음 질문에 답을 보낸 뒤에야 추가 질문 1을 보고, 그 답을 보낸 뒤 추가 질문 2를 봐요. 여러 개를 미리 띄워 두어도 학생마다 자기 속도로 한 번에 하나씩 받아요.<br>· 질문마다 「앞선 생각 그대로 보내기」 또는 「위치·근거 바꾸기」로 한 장씩 답해요. 답을 보내면 앞선 답은 읽기 전용으로 보관돼요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 비교 기준은 언제나 처음 생각이에요. 앞선 질문의 카드는 판의 「만약에 질문」 번호를 눌러 볼 수 있고, 내보내기에도 남아요.<br>· 이 교사 화면에는 띄운 질문이 모두 보여요. 학생에게 미리 보이고 싶지 않으면 화면을 함께 볼 때 주의해 주세요.<br>· 「질문 내리기」는 학생 입력을 잠시 멈춰요. 새 질문을 띄우면 학생은 자기 차례의 질문부터 이어 가요.</p>
     ${canAsk ? '' : '<p class="note wf-warn">지금 보는 질문판은 진행 중이 아니에요. 여기서 띄운 질문은 학생에게 가지 않아요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.</p>'}
     <input type="text" id="wf-in" maxlength="60" placeholder="예) 사자가 다시 커진다면?"${canAsk ? '' : ' disabled'}>
-    ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">${masked ? '· 글을 가려 두었어요. 보거나 고치려면 먼저 「추가 질문 가리기」를 꺼 주세요' : '· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요'}</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
+    ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">${masked ? '· 글을 가려 두었어요. 보거나 고치려면 먼저 「보기 설정」에서 「추가 질문 가리기」를 꺼 주세요' : '· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요'}</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
     <div class="actions">${T.g.whatif.length ? '<button data-a="off">질문 내리기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
     const inp = ov.querySelector('#wf-in'); if (canAsk) inp.focus();
     const reopen = () => { close(); askWhatif(); };
@@ -1702,7 +1723,7 @@ async function exportPNG() {
   canvas.toBlob(b => download(fileBase() + '.png', b));
 }
 function exportMenu() {
-  const names = T.g.showNames ? '지금 「이름 보이기」 상태라 이름이 함께 저장돼요.' : '이름은 「학생1, 학생2…」로 바꿔 저장해요. 이름까지 넣으려면 먼저 「이름 보이기」를 눌러 주세요.';
+  const names = T.g.showNames ? '지금 「이름 보이기」 상태라 이름이 함께 저장돼요.' : '이름은 「학생1, 학생2…」로 바꿔 저장해요. 이름까지 넣으려면 먼저 ' + (isPhoneBoard() ? '⋯ 메뉴' : '「보기 설정」') + '에서 「이름 보이기」를 눌러 주세요.';
   modal(`<h2>내보내기</h2><p class="note">근거 카드와 위치(쪽·세기), 처음 생각과 이어진 만약에 생각(그대로·세기 바뀜·쪽 바뀜·새 근거), 쪽별 학생 수, 공감 수, 묶음을 함께 저장해요.<br>${names}</p>
     <div class="actions" style="justify-content:flex-start">${isPhoneBoard() ? '' : '<button data-a="png">이미지(PNG)</button>'}<button data-a="csv">표(CSV · 엑셀)</button><button data-a="txt">표 복사(AI·문서에 붙여넣기)</button></div>
     <div class="actions"><button class="primary" data-a="close">닫기</button></div>`, (ov, close) => {
@@ -1712,6 +1733,19 @@ function exportMenu() {
     const png = ov.querySelector('[data-a=png]');
     if (png) png.onclick = () => { close(); exportPNG().catch(() => toast('이미지 저장에 실패했어요. 인터넷 연결을 확인해 주세요.')); };
     ov.querySelector('[data-a=txt]').onclick = () => { const t = exportText(); if (t) navigator.clipboard.writeText(t).then(() => toast('표를 복사했어요. 문서나 AI 대화창에 붙여 넣으세요.')).catch(() => { modal(`<h2>표 복사</h2><textarea rows="12">${esc(t)}</textarea><div class="actions"><button class="primary" onclick="this.closest('.overlay').remove()">닫기</button></div>`); }); };
+  });
+}
+// 넓은 화면 「저장·내보내기」: 수업 뒤에 쓰는 세 가지를 한 창에 모았다(휴대폰은 ⋯ 메뉴의 같은 항목). 각 항목은 예전 단추와 같은 동작을 부른다
+function saveMenu() {
+  modal(`<h2>저장·내보내기</h2>
+    <p class="note">「내보내기」는 결과를 이미지·표로 꺼내요. 「수업 저장(JSON)」은 수업 전체를 교사 보관용 파일로 저장하고, 「저장한 수업 불러오기」로 다시 열어요.</p>
+    <div class="actions" style="justify-content:flex-start;flex-direction:column;align-items:stretch">
+      <button data-a="export">내보내기</button>
+      <button data-a="json">수업 저장(JSON)</button>
+      <button data-a="import">저장한 수업 불러오기</button>
+    </div><div class="actions"><button class="primary" data-a="close">닫기</button></div>`, (ov, close) => {
+    ov.querySelector('[data-a=close]').onclick = close;
+    for (const [a, run] of Object.entries({ export: exportMenu, json: exportRoom, import: importRoom })) ov.querySelector(`[data-a=${a}]`).onclick = () => { close(); run(); };
   });
 }
 function moreMenu() {
@@ -1778,7 +1812,7 @@ function openSetup(editing) {
   $('#setup-cancel').onclick = () => openBoard();
 }
 $('#b-code').onclick = ()=>T.room.offline?toast('보관 사본입니다. 수업 재개로 새 코드를 만드세요.'):showQR();
-$('#t-boards').onclick=boardList;$('#t-newboard').onclick=()=>openSetup('new');$('#t-activate').onclick=activateViewed;$('#t-resume').onclick=resumeRoom;$('#t-json').onclick=exportRoom;$('#t-import').onclick=importRoom;$('#home-saved').onclick=savedRooms;$('#home-import').onclick=importRoom;$('#home-json').onclick=()=>{if(!T.room){const r=allStoredRooms()[0];if(!r)return toast('보관한 수업이 없어요');T.room=r;T.g=r.boards[0];}exportRoom();};
+$('#t-boards').onclick=boardList;$('#t-activate').onclick=activateViewed;$('#t-resume').onclick=resumeRoom;$('#home-saved').onclick=savedRooms;$('#home-import').onclick=importRoom;$('#home-json').onclick=()=>{if(!T.room){const r=allStoredRooms()[0];if(!r)return toast('보관한 수업이 없어요');T.room=r;T.g=r.boards[0];}exportRoom();};
 $('#t-names').onclick = () => { T.g.showNames = !T.g.showNames; saveGame(); renderBoard(); };
 $('#t-share').onclick = () => {
   T.g.share = !T.g.share;
@@ -1809,7 +1843,12 @@ document.addEventListener('keydown', e => { if (!T.big || !T.g) return; if (docu
   if (e.key === 'Escape') { if (T.big.one) T.big.one = null; else T.big = null; renderBoard(); }
   else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && bigStep(e.key === 'ArrowLeft' ? -1 : 1)) { e.preventDefault(); renderBoard(); } });
 $('#t-count').onclick = () => { T.g.showCount = !T.g.showCount; saveGame(); renderBoard(); };
-$('#t-export').onclick = exportMenu;
+$('#g-save').onclick = saveMenu;
+// 「보기 설정」 펼침 패널(넓은 화면): 안의 단추를 눌러도 닫지 않아 판을 보면서 연달아 고칠 수 있다. 패널 밖을 누르거나 Esc로 닫는다. 화면 상태만, 저장하지 않는다
+function setViewPop(open) { $('#grp-view').classList.toggle('open', !!open); $('#g-view').setAttribute('aria-expanded', String(!!open)); }
+$('#g-view').onclick = () => setViewPop(!$('#grp-view').classList.contains('open'));
+document.addEventListener('click', e => { const t = e && e.target; if (!(t && t.closest && t.closest('#grp-view'))) setViewPop(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') setViewPop(false); });
 $('#t-more').onclick = moreMenu;
 $('#t-fontdown').onclick = () => { T.g.fs = Math.max(0.7, +(T.g.fs - 0.1).toFixed(1)); saveGame(); renderBoard(); };
 $('#t-fontup').onclick = () => { T.g.fs = Math.min(1.8, +(T.g.fs + 0.1).toFixed(1)); saveGame(); renderBoard(); };
