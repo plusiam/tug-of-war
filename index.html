@@ -65,6 +65,10 @@ h2{font-size:20px;margin:0 0 12px}
 #board-view.phone .tgrp,#board-view.phone .tgap,#board-view.phone #g-save{display:none}
 .whatif-bar{display:none;padding:8px 16px;background:#fff8db;border-bottom:1px solid #f0dc8c;font-weight:700;font-size:calc(18px * var(--fs,1))}
 .whatif-bar.show{display:block}
+.whatif-bar .wf-pause{color:#8a4b00}
+.whatif-bar .wf-pause button{margin-left:8px;padding:5px 14px;font-size:14px;font-weight:700;vertical-align:middle}
+#board-view.phone .whatif-bar .wf-pause button{display:block;margin:6px 0 0;min-height:44px}
+#board-view.phone.land .whatif-bar .wf-pause button{display:inline-block;margin:0 0 0 8px;min-height:36px;padding:4px 12px}
 #board-view.phone #t-mask,#board-view.phone #t-big{display:none}
 #bigq{position:fixed;inset:0;z-index:150;background:#fff;display:flex;flex-direction:column;padding:4vh 5vw 3vh}
 .bq-main{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:4vh;text-align:center}
@@ -770,10 +774,15 @@ const stageOf = c => c.stage ?? c.phase ?? 0;
    번호를 당기거나 재사용하면 교사 쪽 카드·학생 기기에 저장된 카드·보낸 설정(stage)과 어긋나 재전송이 거부되거나 다른 질문의 답으로 들어간다. */
 const WF_GONE = '';
 const whatifList = g => [...(g.whatifArchive || []), ...g.whatif];
-// 판에 보일 최신 회차(지운 회차는 건너뛴다). 없으면 0. 학생에게 보내는 stage·카드 수락 범위는 전체 길이 그대로다.
+// 판에 보일 최신 회차(지운 회차는 건너뛴다). 없으면 0. 학생에게 보내는 stage도 이 번호다(boardInputStage). 카드 수락 범위 검사는 전체 길이를 쓴다.
 function latestStage(g) { const all = whatifList(g); for (let k = all.length; k >= 1; k--) if (all[k - 1] !== WF_GONE) return k; return 0; }
 const whatifCardCount = (g, k) => g.cards.filter(c => stageOf(c) === k).length;   // 숨긴 카드도 센다(다시 보이게 할 수 있으므로)
-const whatifIsUp = (g, k) => g.whatif.length > 0 && k === whatifList(g).length;   // 지금 학생에게 떠 있는 질문
+const whatifIsUp = (g, k) => g.whatif.length > 0 && k === latestStage(g);   // 지금 학생에게 떠 있는 질문(지우지 않은 마지막 질문)
+// 지금 떠 있는 질문의 글. 응답을 멈췄거나 추가 질문이 없으면 null
+const upWhatif = g => g.whatif.length ? (whatifList(g)[latestStage(g) - 1] || null) : null;
+/* 멈춘 응답 다시 받기: 내려 둔 질문을 번호 그대로 다시 올린다. 새 질문을 만들지 않으므로 번호가 늘지 않고, 학생은 멈추기 전 자기 차례부터 이어 간다.
+   지우지 않은 마지막 질문부터 뒤쪽(지운 빈 칸 포함)을 순서 그대로 옮겨 번호(stage)가 바뀌지 않게 한다. 다시 올릴 질문이 없으면 false */
+function resumeInput(g) { const k = latestStage(g); if (g.whatif.length || !k) return false; g.whatifArchive ||= []; g.whatif = g.whatifArchive.splice(k - 1); return true; }
 function whatifSlot(g, k) { const a = (g.whatifArchive || []).length; return k <= a ? [g.whatifArchive, k - 1] : [g.whatif, k - 1 - a]; }
 function editWhatif(g, k, text) {
   const all = whatifList(g), v = String(text ?? '').trim().slice(0, 60);
@@ -797,7 +806,7 @@ function lastStage() { return extraMasked() ? 0 : shownStage(); }
    진행 중인 질문판에 추가 질문이 있으면 기본으로 가린다. 화면 상태일 뿐이라 새로 고치면 다시 가려지고, 학생에게 가는 설정은 달라지지 않는다. */
 function extraMaskable() { const g = T.g, r = T.room; return !!g && !!r && !r.offline && T.viewedBoardId === r.activeBoardId && latestStage(g) > 0 && !isPhoneBoard(); }
 function extraMasked() { return extraMaskable() && T.maskOff !== T.g.id; }
-function inputStage() { return T.g.whatif.length ? allWhatifs().length : 0; }
+function inputStage() { return boardInputStage(T.g); }
 function onBoard(c) { const st = stageOf(c); return !c.hidden && (st === 0 || st === lastStage()); }
 // 만약에 단계에서 처음 생각과 자리·세기가 같은 카드는 작은 표시로(누르면 펼쳐짐)
 const isMini = c => stageOf(c) > 0 && changeOf(c) === '그대로';
@@ -811,8 +820,9 @@ function changeIn(g, c) {
 function stageCard(cards, stage) { return cards.filter(c=>stageOf(c)===stage&&!c.rejected).at(-1)||null; }
 function initialCard(cards) { return stageCard(cards,0); }
 function previousCard(cards,stage) { return cards.filter(c=>stageOf(c)<stage&&!c.rejected).sort((a,b)=>stageOf(a)-stageOf(b)).at(-1)||null; }
-function boardInputStage(b) { return b.whatif.length ? whatifList(b).length : 0; }
-function initialLocked(b) { return whatifList(b).length>0; }
+function boardInputStage(b) { return b.whatif.length ? latestStage(b) : 0; }
+// 추가 질문이 하나라도 남아 있을 때만 처음 생각을 잠근다. 띄웠던 질문을 모두 지웠다면(카드가 없어야 지울 수 있다) 추가 질문을 띄운 적 없는 판처럼 처음 질문을 다시 받는다
+function initialLocked(b) { return latestStage(b)>0; }
 // A sparse legacy history sets a floor, never fabricated missing answers.
 function personalStage(queue,cards) {
  const floor=Math.max(-1,...cards.map(stageOf));
@@ -829,6 +839,7 @@ function cardRejection(room,p) {
  const own=b.cards.filter(c=>c.sid===p.sid), missing=!initialCard(own)&&!own.some(c=>stageOf(c)>0);
  if(stage>0&&missing)return {code:'initialRequired',message:'처음 답을 먼저 보내 주세요. 현재 추가 질문은 처음 답이 도착한 뒤 답할 수 있어요.'};
  const target=personalStage(preparedQueue(b),own),paused=initialLocked(b)&&!boardInputStage(b);
+ if(paused&&b.deletedAt===undefined&&b.id===room.activeBoardId)return {code:'closed',message:'선생님이 응답을 잠시 멈췄어요. 쓰던 글은 보관했어요. 다시 열리면 보낼 수 있어요.'};
  if(b.deletedAt!==undefined||b.id!==room.activeBoardId||paused||stage!==target)return {code:'closed',message:'이전 단계는 읽기 전용이에요. 쓰던 글은 보관했어요. 현재 질문에 답해 주세요.'};
  const canonical=stageCard(b.cards.filter(c=>c.sid===p.sid),stage);
  if(canonical&&canonical.id!==p.id)return {code:'duplicate',message:'이번 단계에 이미 보낸 카드가 있어요. 새로고침 후 이번 생각 수정으로 고쳐 주세요.'};
@@ -838,7 +849,7 @@ function cardRejection(room,p) {
 function cfgPayload() {
  const g=activeBoard();if(!g)return null;
  const gate=g.id!==T.room.legacyBoardId, notice='새 질문판이 시작됐어요. 페이지를 새로고침해 주세요.';
- return { boardId:g.id, legacyBoardId:T.room.legacyBoardId, configSeq:T.room.configSeq, roomId:T.room.storageId, roomCreated:codeTime(), contentV4:{question:g.question,left:g.left,right:g.right,whatif:g.whatif.at(-1)||null},question:gate?notice:g.question,left:gate?'새로고침 필요':g.left,right:gate?'새로고침 필요':g.right,whatif:gate?notice:g.whatif.at(-1)||null,share:g.share,preparedQuestions:preparedQueue(g),oneCardPerStage:true,initialLocked:initialLocked(g),stage:g.whatif.length?(g.whatifArchive.length+g.whatif.length):0,
+ return { boardId:g.id, legacyBoardId:T.room.legacyBoardId, configSeq:T.room.configSeq, roomId:T.room.storageId, roomCreated:codeTime(), contentV4:{question:g.question,left:g.left,right:g.right,whatif:upWhatif(g)},question:gate?notice:g.question,left:gate?'새로고침 필요':g.left,right:gate?'새로고침 필요':g.right,whatif:gate?notice:upWhatif(g),share:g.share,preparedQuestions:preparedQueue(g),oneCardPerStage:true,initialLocked:initialLocked(g),stage:boardInputStage(g),
  board:g.share?g.cards.filter(c=>!c.hidden).map(c=>({boardId:g.id,id:c.id,text:c.text,side:c.side,strength:c.strength,stage:stageOf(c),likes:(c.likes||[]).length})):null };
 }
 let cfgTimer=null, boardTimer=null, boardLast=0;
@@ -1173,7 +1184,7 @@ function extraQuestionHTML(text,stage,current,note='',nowLabel='지금 답할 �
 function studentQuestionEcho(c,open,target=c.stage||0) {
   const first='<span class="e-q"><small>처음 질문</small>'+esc(c.question)+'</span>';
   if(c.whatif&&target===0)return '<span class="e-main"><small>'+(open?'지금 답할 질문 · 처음 질문':'응답 잠시 멈춤')+'</small>'+esc(c.question)+'</span><span class="e-q"><small>선생님이 제시한 추가 질문 · 추가 질문 '+c.stage+'</small>'+esc(c.whatif)+'</span>';
-  return c.whatif ? first+'<span class="e-main"><small>지금 답할 질문 · 추가 질문 '+(c.stage||0)+'</small>'+esc(c.whatif)+'</span>' : open?'<span class="e-main"><small>지금 답할 질문 · 처음 질문</small>'+esc(c.question)+'</span>':first+'<span class="e-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
+  return c.whatif ? first+'<span class="e-main"><small>'+(open?'지금 답할 질문':'응답 잠시 멈춤')+' · 추가 질문 '+(c.stage||0)+'</small>'+esc(c.whatif)+'</span>' : open?'<span class="e-main"><small>지금 답할 질문 · 처음 질문</small>'+esc(c.question)+'</span>':first+'<span class="e-paused">응답 잠시 멈춤 · 선생님이 다시 열 때까지 기다려 주세요.</span>';
 }
 const BIG_PER_COL = 7; // 양쪽 근거: 한 쪽에 7줄씩, 한 화면 14개
 function bigDots(n) { return '<span class="bq-dots"><i>' + '●'.repeat(n) + '</i>' + '○'.repeat(5 - n) + '</span>'; }
@@ -1250,7 +1261,7 @@ function renderBoard() {
   const board = $('#board');
   $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#t-activate').classList.toggle('now',T.viewedBoardId===T.room.activeBoardId); $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
-  const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=g.whatif.at(-1), paused=!wf&&initialLocked(g);
+  const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=upWhatif(g), paused=!wf&&initialLocked(g);
   const viewNote=[T.room.offline?'오프라인 보관':!responding?'보관판 열람':paused?'응답 잠시 멈춤':'',g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'이전 버전 여러 카드 보관':''].filter(Boolean).join(' · ');
   $('#b-q').innerHTML=questionHeadingHTML(g.question,responding&&!wf&&!paused,viewNote,'교사가 준비한 질문');
   $('#b-code b').textContent = T.room.offline ? '오프라인' : g.code;
@@ -1264,7 +1275,9 @@ function renderBoard() {
   mb.textContent = masked ? '추가 질문 가리기: 켜짐' : '추가 질문 가리기: 꺼짐'; mb.setAttribute('aria-pressed', String(masked));
   renderBig();
   $('#b-whatif').classList.toggle('show', masked||!!wf||paused);
-  $('#b-whatif').innerHTML=masked?'<span class="qh-meta"><span class="qh-label">추가 질문</span></span><span class="qh-paused">가려 두었어요 · 「보기 설정」에서 「추가 질문 가리기」를 끄면 추가 질문과 만약에 생각이 보여요.</span>':wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
+  // 진행 중인 판의 응답이 멈춰 있으면 그 사실과 「응답 다시 받기」를 질문 바로 아래에 보인다(가려 둔 상태에서도 보인다. 질문 글은 넣지 않는다)
+  const pauseNote=responding&&paused?'<span class="qh-paused wf-pause">응답 잠시 멈춤 · 학생들이 지금은 답을 보낼 수 없어요. <button type="button" class="primary" data-wf-resume>응답 다시 받기</button></span>':'';
+  $('#b-whatif').innerHTML=masked?'<span class="qh-meta"><span class="qh-label">추가 질문</span></span><span class="qh-paused">가려 두었어요 · 「보기 설정」에서 「추가 질문 가리기」를 끄면 추가 질문과 만약에 생각이 보여요.</span>'+pauseNote:pauseNote?pauseNote:wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
   renderCounts(); renderStageBar();renderParticipants();
   const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
   // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
@@ -1633,11 +1646,12 @@ function askWhatif() {
   const prev = all.map((w, i) => { const k = i + 1; if (w === WF_GONE) return ''; const n = whatifCardCount(g, k);
     if (masked) return `<li data-k="${k}"><span class="wf-q"><b>${k}.</b> (가려 둔 질문)</span><span class="wf-act"><span class="wf-n">${n ? `카드 ${n}장` : '카드 없음'}</span></span></li>`;
     return `<li data-k="${k}"><span class="wf-q"><b>${k}.</b> ${esc(w)}${whatifIsUp(g, k) ? ' <em>떠 있음</em>' : ''}</span><span class="wf-act"><span class="wf-n">${n ? `카드 ${n}장` : '카드 없음'}</span><button type="button" data-wf="edit">고치기</button>${canDeleteWhatif(g, k) ? '<button type="button" data-wf="del">지우기</button>' : ''}</span></li>`; }).join('');
-  modal(`<h2>그런데 만약에?</h2><p class="note">추가 질문은 학생에게 <b>순서대로 하나씩</b> 공개돼요. 학생은 처음 질문에 답을 보낸 뒤에야 추가 질문 1을 보고, 그 답을 보낸 뒤 추가 질문 2를 봐요. 여러 개를 미리 띄워 두어도 학생마다 자기 속도로 한 번에 하나씩 받아요.<br>· 질문마다 「앞선 생각 그대로 보내기」 또는 「위치·근거 바꾸기」로 한 장씩 답해요. 답을 보내면 앞선 답은 읽기 전용으로 보관돼요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 비교 기준은 언제나 처음 생각이에요. 앞선 질문의 카드는 판의 「만약에 질문」 번호를 눌러 볼 수 있고, 내보내기에도 남아요.<br>· 이 교사 화면에는 띄운 질문이 모두 보여요. 학생에게 미리 보이고 싶지 않으면 화면을 함께 볼 때 주의해 주세요.<br>· 「질문 내리기」는 학생 입력을 잠시 멈춰요. 새 질문을 띄우면 학생은 자기 차례의 질문부터 이어 가요.</p>
+  modal(`<h2>그런데 만약에?</h2><p class="note">추가 질문은 학생에게 <b>순서대로 하나씩</b> 공개돼요. 학생은 처음 질문에 답을 보낸 뒤에야 추가 질문 1을 보고, 그 답을 보낸 뒤 추가 질문 2를 봐요. 여러 개를 미리 띄워 두어도 학생마다 자기 속도로 한 번에 하나씩 받아요.<br>· 질문마다 「앞선 생각 그대로 보내기」 또는 「위치·근거 바꾸기」로 한 장씩 답해요. 답을 보내면 앞선 답은 읽기 전용으로 보관돼요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 비교 기준은 언제나 처음 생각이에요. 앞선 질문의 카드는 판의 「만약에 질문」 번호를 눌러 볼 수 있고, 내보내기에도 남아요.<br>· 이 교사 화면에는 띄운 질문이 모두 보여요. 학생에게 미리 보이고 싶지 않으면 화면을 함께 볼 때 주의해 주세요.<br>· 「응답 잠시 멈추기」는 학생 입력을 모두 멈춰요(처음 질문에 아직 답하지 않은 학생도 보낼 수 없어요). 「응답 다시 받기」를 누르면 멈추기 전 그대로, 학생마다 자기 차례의 질문부터 이어 가요.</p>
+    ${canAsk && !T.g.whatif.length && latestStage(T.g) > 0 ? '<p class="note wf-warn">지금은 응답이 멈춰 있어요. 「응답 다시 받기」를 누르면 질문 번호는 그대로 두고 다시 받아요. 새 질문을 띄워도 다시 열려요.</p>' : ''}
     ${canAsk ? '' : '<p class="note wf-warn">지금 보는 질문판은 진행 중이 아니에요. 여기서 띄운 질문은 학생에게 가지 않아요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.</p>'}
     <input type="text" id="wf-in" maxlength="60" placeholder="예) 사자가 다시 커진다면?"${canAsk ? '' : ' disabled'}>
     ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">${masked ? '· 글을 가려 두었어요. 보거나 고치려면 먼저 「보기 설정」에서 「추가 질문 가리기」를 꺼 주세요' : '· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요'}</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
-    <div class="actions">${T.g.whatif.length ? '<button data-a="off">질문 내리기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
+    <div class="actions">${T.g.whatif.length ? '<button data-a="off">응답 잠시 멈추기</button>' : canAsk && latestStage(T.g) > 0 ? '<button data-a="on">응답 다시 받기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
     const inp = ov.querySelector('#wf-in'); if (canAsk) inp.focus();
     const reopen = () => { close(); askWhatif(); };
     ov.querySelectorAll('[data-wf]').forEach(b => b.onclick = () => {
@@ -1662,12 +1676,21 @@ function askWhatif() {
     });
     ov.querySelector('[data-a=close]').onclick = close;
     const off = ov.querySelector('[data-a=off]'); if (off) off.onclick = () => { hideWhatif(); close(); };
+    const on = ov.querySelector('[data-a=on]'); if (on) on.onclick = () => { close(); resumeWhatif(); };
     const ok = () => { if (!canAsk) return toast('진행 중인 질문판이 아니에요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.'); const v = inp.value.trim(); if (!v) return; T.g.whatif.push(v.slice(0, 60)); T.view = null; saveGame(); renderBoard(); pushConfig(); close(); };
     ov.querySelector('[data-a=ok]').onclick = ok; inp.onkeydown = e => { if (e.key === 'Enter') ok(); };
   });
 }
-function hideWhatif() { // 질문 기록은 남기고 화면에서만 내림
+function hideWhatif() { // 응답 잠시 멈추기: 질문 기록은 남기고 학생 입력을 모두 멈춘다. 「응답 다시 받기」(resumeWhatif)로 되돌린다
   T.g.whatifArchive = (T.g.whatifArchive || []).concat(T.g.whatif.splice(0)); saveGame(); renderBoard(); pushConfig();
+  toast('응답을 잠시 멈췄어요. 「응답 다시 받기」를 누르면 이어서 받아요.');
+}
+function resumeWhatif() {
+  if (!T.room || !T.g) return;
+  if (T.room.offline || T.viewedBoardId !== T.room.activeBoardId) return toast('진행 중인 질문판에서만 응답을 다시 받을 수 있어요.');
+  if (!resumeInput(T.g)) return;
+  T.view = null; saveGame(); renderBoard(); pushConfig();
+  toast('응답을 다시 받아요. 학생은 멈추기 전 자기 차례의 질문부터 이어 가요.');
 }
 function allWhatifs() { return [...(T.g.whatifArchive || []), ...T.g.whatif]; }
 function sideName(s) { return s === 'L' ? T.g.left : T.g.right; }
@@ -1822,6 +1845,7 @@ $('#t-share').onclick = () => {
   toast(T.g.share ? '판에 근거 글이 보이고, 학생 화면에도 친구 근거(이름 없이)가 보여요' : '근거 글을 접었어요. 판에는 쪽·세기·쓴 사람만 보여요. 카드를 누르면 그 근거만 펼쳐져요');
 };
 $('#t-whatif').onclick = askWhatif;
+$('#b-whatif').addEventListener('click', e => { const t = e && e.target; if (t && t.closest && t.closest('[data-wf-resume]')) resumeWhatif(); });
 $('#t-mask').onclick = () => { if (!extraMaskable()) return; const on = extraMasked(); T.maskOff = on ? T.g.id : null; T.sel.clear(); renderBoard();
   toast(on ? '추가 질문과 만약에 생각을 다시 보여요' : '추가 질문 글과 만약에 생각을 가렸어요. 학생에게 가는 질문은 그대로예요'); };
 $('#t-big').onclick = () => { if (!T.g || isPhoneBoard()) return; T.big = { boardId: T.g.id, tab: 'q', stage: 0, sideStage: 0, page: 0, one: null }; renderBoard(); };
@@ -2009,7 +2033,7 @@ function composerState(d,meta,live){
 function renderComposerStatus(){
   const meta=activeSubmission(), key=meta&&submissionKey(meta.boardId,meta.id), live=!!(key&&S.pending[key]);
   const state=composerState(composerDraft(),meta,live), b=$('#s-send'), status=$('#s-send-status');
-  if(!studentStageOpen()){state.disabled=true;state.label='이전 생각 · 읽기 전용';state.message='처음 생각은 보관돼요. 다음 만약에 질문을 기다려 주세요.';}
+  if(!studentStageOpen()){state.disabled=true;state.label='응답 잠시 멈춤';state.message='선생님이 응답을 잠시 멈췄어요. 쓰던 글은 보관돼요. 다시 열리면 보낼 수 있어요.';}
   else if(meta?.state==='rejected'){state.disabled=meta.code!=='duplicate';state.label='받지 못했어요';state.message=meta.message;}
   else if(currentCard()&&!state.disabled&&state.label!=='재전송')state.label='이번 생각 수정 보내기';
   b.disabled=state.disabled;b.textContent=state.label;status.dataset.state=state.state;status.textContent=(S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value+'. ':'')+state.message;
@@ -2033,12 +2057,12 @@ function renderStudent() {
   if (S.from && !curStage()) resetForm();
   $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
   const open=studentStageOpen();
-  $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&curStage()===0,!open?'기록 보관':'');
+  $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&curStage()===0,!open?'응답 잠시 멈춤':'');
   $('#s-q').classList.toggle('long', (c.question || '').length > 30);
   const target=curStage(),prompt=configQueue(c).find(q=>q.stage===target)?.text||null;
   $('#student-view').classList.toggle('has-wf',!!prompt);
   $('#s-wf').classList.toggle('hide',!prompt&&!configQueue(c).length&&open);
-  $('#s-wf').innerHTML=!open?'<span class="qh-paused">응답 잠시 멈춤 · 쓰던 글은 보관돼요.</span>':prompt?extraQuestionHTML(prompt,target,true):configQueue(c).length?'<span class="qh-help">추가 질문이 준비되어 있어요. 먼저 처음 질문에 답해 주세요.</span>':'';
+  $('#s-wf').innerHTML=!open?'<span class="qh-paused">응답 잠시 멈춤 · 선생님이 다시 열면 보낼 수 있어요. 쓰던 글은 보관돼요.</span>':prompt?extraQuestionHTML(prompt,target,true):configQueue(c).length?'<span class="qh-help">추가 질문이 준비되어 있어요. 먼저 처음 질문에 답해 주세요.</span>':'';
   { const e=$('#s-q-echo'),visible={question:c.question,whatif:prompt,stage:target},k=JSON.stringify([c.question,prompt,target,open]);if(e.dataset.k!==k){e.dataset.k=k;e.classList.toggle('wf',!!prompt);e.innerHTML=studentQuestionEcho(visible,open,target);} }
   $('#s-rope-left').textContent=c.left; $('#s-rope-right').textContent=c.right;
   $('#s-sideL').textContent = '◀ ' + c.left; $('#s-sideR').textContent = c.right + ' ▶';
@@ -2329,7 +2353,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pageshow', e => { if (e.persisted) onPageReturn(); }); // 첫 로드의 pageshow는 복귀가 아니다
 window.addEventListener('online', onPageReturn);
-window.TugData={participantRows,effectiveStage,questionHeadingHTML,extraQuestionHTML,studentQuestionEcho,stageCard,initialCard,previousCard,initialLocked,boardInputStage,cardRejection,migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
+window.TugData={resumeInput,upWhatif,participantRows,effectiveStage,questionHeadingHTML,extraQuestionHTML,studentQuestionEcho,stageCard,initialCard,previousCard,initialLocked,boardInputStage,cardRejection,migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
   // 폰 교사 화면·연결 안정화 시험용 순수 함수
   isPhoneBoard,isPhoneLandscape,phoneBoardModel,WF_GONE,whatifList,latestStage,whatifCardCount,editWhatif,canDeleteWhatif,deleteWhatif,validStage,phoneRowView,phoneBoardHTML,codeClashLoser,autoResendPlan,MAX_AUTO_REVIVES,RETURN_JITTER_MS,RETURN_GAP_MS};
 
