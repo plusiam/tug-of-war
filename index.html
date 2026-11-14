@@ -130,8 +130,35 @@ h2{font-size:20px;margin:0 0 12px}
 .wf-edit{display:grid;gap:6px;flex:1 1 100%}
 .wf-warn{color:#a05a00}
 button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
-#board{position:relative;flex:1;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;
+/* 판을 감싸는 틀: 평소에는 판이 틀에 꼭 맞고(한 화면 판), 카드가 넘칠 때만 판이 길어져 틀 안에서 세로로 스크롤한다 */
+#board-scroll{position:relative;flex:1;min-height:0;overflow:hidden}
+#board-scroll:focus{outline:none}
+#board-scroll:focus-visible{outline:3px solid #ffbf00;outline-offset:-3px}
+#board{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;
   background:linear-gradient(90deg,var(--Lbg) 0,var(--Lbg) 50%,var(--Rbg) 50%,var(--Rbg) 100%)}
+/* 늘어난 판(넓은 화면 전용, 읽기용): 세로 스크롤, 끌기 대신 누르기만 */
+#board-view.expanded #board-scroll{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;overflow-anchor:none;scrollbar-gutter:stable}
+#board-view.expanded #board{position:relative;touch-action:pan-y}
+#board-view.expanded #board .card{cursor:pointer}
+#board-view.expanded #board .endlabel{display:none}
+#board-view.expanded #board .card.capped .meta{flex-wrap:wrap}
+#board-view.expanded #board .card.capped .meta>span{white-space:normal;overflow-wrap:anywhere}
+#board-view.expanded #board .card.capped .meta .str{white-space:nowrap}
+/* 늘어난 판 위에 고정하는 안내 줄: 양 끝 이름 · 지금 보는 곳 · 세기 눈금 */
+#exp-strip{display:none;flex-shrink:0;background:#fff;border-bottom:1px solid var(--line)}
+#board-view.expanded #exp-strip{display:block}
+.xs-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 12px}
+.xs-end{flex:1 1 0;min-width:0;font-weight:900;font-size:calc(20px * var(--fs,1));line-height:1.2;overflow-wrap:anywhere}
+.xs-end.L{color:var(--L)} .xs-end.R{color:var(--R);text-align:right}
+.xs-mid{display:flex;align-items:center;gap:10px;font-weight:800;font-size:calc(16px * var(--fs,1));color:var(--ink);white-space:nowrap}
+.xs-mid button{padding:4px 12px;font-size:14px;min-height:34px;font-weight:700}
+.xs-ticks{position:relative;height:calc(26px * var(--fs,1));background:linear-gradient(90deg,var(--Lbg) 0,var(--Lbg) 50%,var(--Rbg) 50%,var(--Rbg) 100%)}
+.xs-ticks span{position:absolute;top:50%;transform:translate(-50%,-50%);font-weight:800;font-size:calc(15px * var(--fs,1));white-space:nowrap;color:var(--L)}
+.xs-ticks span.R{color:var(--R)}
+.xs-ticks i{position:absolute;left:50%;top:3px;bottom:3px;width:4px;margin-left:-2px;background:#e0b100;border-radius:2px}
+/* 이미지(PNG) 저장 때만: 늘어난 판 전체가 담기도록 틀을 잠시 푼다 */
+#board-view.exporting{height:auto}
+#board-view.exporting #board-scroll{flex:none;overflow:visible}
 .endlabel{position:absolute;top:10px;font-weight:900;font-size:calc(24px * var(--fs,1));padding:6px 14px;border-radius:12px;background:#fff;max-width:44%;line-height:1.25}
 .endlabel.L{left:12px;color:var(--L);border:2px solid var(--L)}
 .endlabel.R{right:12px;color:var(--R);border:2px solid var(--R);text-align:right}
@@ -302,7 +329,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
    renderBoard가 창 폭 640px 이하이거나 가로로 돌린 휴대폰(isPhoneBoard)일 때 #board-view에 .phone을 붙인다(가로일 때는 .land도). 넓은 화면에는 아래 규칙이 걸리지 않는다. */
 #phone-board{display:none}
 #board-view.phone{height:100vh;height:100dvh}
-#board-view.phone #board,#board-view.phone #selbar{display:none!important}
+#board-view.phone #board,#board-view.phone #board-scroll,#board-view.phone #exp-strip,#board-view.phone #selbar{display:none!important}
 #board-view.phone .topbar{padding:8px 10px;gap:8px}
 #board-view.phone .topbar .q{flex:1 1 100%;min-width:0;font-size:18px;line-height:1.35;overflow-wrap:anywhere}
 #board-view.phone .codechip{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:14px}
@@ -517,6 +544,7 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
         <button id="g-view" title="큰 화면에 무엇을 보일지 정해요. 추가 질문 가리기, 찬반 수, 이름 보이기, 글자 크기가 들어 있어요." aria-haspopup="true" aria-expanded="false">보기 설정 ▾</button>
         <div class="tpop" id="pop-view">
           <button id="t-mask" class="hide" title="켜 두면 큰 화면에 추가 질문 글과 만약에 생각이 보이지 않아요. 학생에게 가는 질문은 달라지지 않아요." aria-pressed="true">추가 질문 가리기: 켜짐</button>
+          <button id="t-expand" class="on" title="카드가 판에 다 들어가지 않으면 판을 세로로 늘려 스크롤해서 보여요. 늘어난 판에서는 카드 끌기·묶기를 쉬어요. 끄면 예전처럼 한 화면 안에 겹쳐 쌓고, 끌기·묶기를 쓸 수 있어요." aria-pressed="true">자동 확장: 켜짐</button>
           <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
           <button id="t-names">이름 보이기</button>
           <div class="tfs">글자 크기<span><button id="t-fontdown">가-</button><button id="t-fontup">가+</button></span></div>
@@ -528,7 +556,11 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
   </div>
   <div class="countbar" id="b-countbar"></div>
   <div id="b-participants"></div><div class="stagebar" id="b-stagebar"></div>
-  <div id="board">
+  <div id="exp-strip" aria-label="양 끝 이름과 세기 눈금">
+    <div class="xs-row"><span class="xs-end L" id="xs-l"></span><span class="xs-mid"><span id="xs-where"></span><button type="button" id="xs-rope" title="줄(밧줄)이 있는 자리로 돌아가요.">밧줄로</button></span><span class="xs-end R" id="xs-r"></span></div>
+    <div class="xs-ticks" id="xs-ticks" aria-hidden="true"></div>
+  </div>
+  <div id="board-scroll" aria-label="줄다리기 판"><div id="board">
     <div class="lane top" id="b-lane-top"><b>처음 생각</b></div>
     <div class="lane bot" id="b-lane-bot"></div>
     <div class="endlabel L" id="b-l"></div>
@@ -536,7 +568,7 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
     <div class="rope"></div><div class="flag"></div>
     <svg id="links"></svg>
     <div class="empty-hint" id="b-empty">학생들이 근거를 보내면 여기에 카드가 놓여요.<br>위쪽 <b>접속 코드</b>를 눌러 QR을 크게 띄워 주세요.</div>
-  </div>
+  </div></div>
   <div id="phone-board" aria-label="카드 목록"></div>
   <div class="selbar hide" id="selbar">
     <span id="sel-n"></span>
@@ -1257,9 +1289,170 @@ function bigStep(d) { // ← → : 한 장 보기에서는 이전/다음 근거,
   else B.page = (B.page || 0) + d;
   return true;
 }
+/* ---------- 넓은 화면: 넘치는 판을 세로로 늘리기(읽기용, 2026-11-14) ----------
+   카드가 한 화면 판에 다 들어가면 예전 그대로 그린다(끌기·묶기 포함).
+   다 들어가지 않을 때만 판을 세로로 늘리고 스크롤해서 본다. 줄(밧줄)은 위쪽에 필요한 높이만큼 내려가고, 가로 자리(쪽·세기)는 그대로다.
+   화면 상태일 뿐이라 저장·전송하지 않고, 카드의 x·y·묶음 기록도 고치지 않는다. 늘어난 판에서는 끌기·묶기를 쉰다(「보기 설정 → 자동 확장」을 끄면 예전 판). */
+const EXP = { on: true, boardId: null, rope: 0, height: 0, base: 0, hinted: new Set(), dragHint: false };
+function expShown() { return $('#board-view').classList.contains('expanded'); }
+// 한 화면 판으로 되돌린다(늘어난 판에서 쓴 화면 값만 지운다)
+function expReset(board) {
+  const view = $('#board-view');
+  if (!view.classList.contains('expanded') && !board.style.height) return;
+  view.classList.remove('expanded'); board.style.height = '';
+  for (const el of board.querySelectorAll('.rope,.flag')) el.style.top = '';
+  for (const id of ['#b-lane-top', '#b-lane-bot']) { const e = $(id); e.style.top = ''; e.style.bottom = ''; }
+  const sc = $('#board-scroll'); sc.scrollTop = 0; if (sc.removeAttribute) sc.removeAttribute('tabindex');
+}
+// 예전 배치로 다 담지 못했는지: 겹쳐 쌓았거나(stk), 자동 배치 카드가 판 밖으로 나갔다
+function boardOverflows(board, g) {
+  const H = board.clientHeight || 0; if (!H) return false;
+  for (const e of board.querySelectorAll('.card')) {
+    if (e.classList.contains('stk')) return true;
+    const c = g.cards.find(x => x.id === e.dataset.id);
+    if (c && c.x == null && (e.offsetTop < -1 || e.offsetTop + e.offsetHeight > H + 1)) return true;
+  }
+  return false;
+}
+// 다시 그리기 전에, 지금 읽고 있는 카드(보이는 영역 가운데에 가장 가까운 카드)와 스크롤 자리를 적어 둔다
+function expAnchor(board) {
+  if (!T.g || !expShown() || EXP.boardId !== T.g.id) return null;
+  const sc = $('#board-scroll'), top = sc.scrollTop, vh = sc.clientHeight, mid = top + vh / 2;
+  let best = null, bd = Infinity;
+  for (const e of board.querySelectorAll('.card')) {
+    const o = e.offsetTop, h = e.offsetHeight; if (o + h <= top || o >= top + vh) continue;
+    const d = Math.abs(o + h / 2 - mid); if (d < bd) { bd = d; best = e; }
+  }
+  return { id: best ? best.dataset.id : null, off: best ? best.offsetTop : 0, scroll: top, rope: EXP.rope };
+}
+// 겹치지 않게 놓기(순수 함수). units: 도착 순 [{lane 0 위|1 아래, manual, pref, left, right, height, late}].
+// dist = 줄에서 카드 윗변까지의 거리(위쪽은 음수). 끌어 놓은 카드(manual)를 먼저 제자리에 두고, 겹치면 줄에서 먼 쪽으로 비킨다.
+// 자동 카드는 줄 가까이부터 채운다(late는 그 뒤). 가로 자리는 건드리지 않는다. 돌려주는 값: 위·아래에 필요한 높이.
+function expPack(units, gap, ropeGap) {
+  const occ = [[], []], across = (a, b) => a.left < b.right + 2 && b.left < a.right + 2;
+  const put = (u, y) => {
+    const dir = u.lane ? 1 : -1, list = occ[u.lane];
+    for (let n = 0; n <= list.length; n++) {
+      const hit = list.find(o => across(u, o) && y < o.bottom + gap && y + u.height + gap > o.top);
+      if (!hit) break;
+      y = dir > 0 ? hit.bottom + gap : hit.top - u.height - gap;
+    }
+    u.dist = y; list.push({ left: u.left, right: u.right, top: y, bottom: y + u.height });
+  };
+  for (const u of units) if (u.manual) put(u, u.pref);
+  for (const late of [false, true]) for (const u of units) if (!u.manual && !!u.late === late) put(u, u.lane ? ropeGap : -ropeGap - u.height);
+  let top = 0, bottom = 0;
+  for (const u of units) { top = Math.max(top, -u.dist); bottom = Math.max(bottom, u.dist + u.height); }
+  return { top, bottom };
+}
+function expLayout(board, vis, ls, anchor) {
+  const g = T.g, view = $('#board-view'), sc = $('#board-scroll');
+  const fresh = !(anchor && EXP.boardId === g.id);
+  view.classList.add('expanded'); sc.tabIndex = 0; // 키보드(↑↓·Space·PageDown)로도 스크롤할 수 있게
+  const base = sc.clientHeight || 600, width = board.clientWidth || 1200, gap = 8, ropeGap = 16, GROUP_GAP = 10;
+  const colW = (colX('R', 2) - colX('R', 1)) * width / 100;
+  // 1) 실제 크기를 잰다. 너무 넓은 카드는 가운데(x)를 지킨 채 폭만 줄인다(글자는 줄이지 않고 줄을 바꾼다)
+  const rows = [];
+  for (const c of vis) {
+    const el = board.querySelector('.card[data-id="' + c.id + '"]'); if (!el) continue;
+    el.classList.remove('stk', 'capped'); el.style.zIndex = ''; el.style.width = ''; el.style.minWidth = ''; el.style.maxWidth = '';
+    rows.push({ c, el, x: c.x ?? colX(c.side, c.strength) });
+  }
+  for (const r of rows) r.w = r.el.offsetWidth;
+  for (const r of rows) {
+    // 자동 배치 카드는 한 칸(눈금 사이) 너비 안에 둔다 → 옆 칸과 엇갈리지 않고 열이 반듯하게 선다. 끌어 놓은 카드는 판 가장자리만 지킨다
+    const center = r.x * width / 100, edge = 2 * Math.min(center, width - center) - 4;
+    const limit = Math.max(72, Math.floor(r.c.x != null ? edge : Math.min(edge, colW - 4)));
+    if (r.w > limit) { r.capped = true; r.el.classList.add('capped'); r.el.style.minWidth = '0'; r.el.style.width = limit + 'px'; r.el.style.maxWidth = limit + 'px'; }
+  }
+  for (const r of rows) { if (r.capped) r.w = r.el.offsetWidth; r.h = r.el.offsetHeight; }
+  // 2) 놓을 단위를 만든다. 끌어 놓은 묶음은 한 덩어리, 나머지는 카드 한 장씩
+  const units = [], byGroup = new Map(), colN = new Map();
+  for (const r of rows) {
+    const c = r.c, manual = c.x != null;
+    r.left = r.x * width / 100 - r.w / 2; r.right = r.left + r.w;
+    r.pref = manual ? (Number(c.y) || 0) * base / 100 - base / 2 : 0; // 저장된 y(%)는 한 화면 판 기준 → 줄에서의 거리로 읽는다
+    let u = manual && c.group ? byGroup.get(c.group) : null;
+    if (!u) {
+      u = { manual, rows: [], late: false, lane: 0 };
+      if (!manual) {
+        if (ls) u.lane = stageOf(c) ? 1 : 0;
+        else { const k = c.side + c.strength, n = colN.get(k) || 0; colN.set(k, n + 1); u.lane = n % 2; } // 만약에 전: 줄 위·아래 번갈아
+        u.late = !!ls && u.lane === 1 && isMini(c); // 줄 아래에서 ‘그대로’ 작은 표시는 바뀐 생각 뒤에
+      }
+      units.push(u); if (manual && c.group) byGroup.set(c.group, u);
+    }
+    u.rows.push(r);
+  }
+  for (const u of units) {
+    if (u.manual) u.rows.sort((a, b) => (a.c.y || 0) - (b.c.y || 0));
+    u.left = Math.min(...u.rows.map(r => r.left)); u.right = Math.max(...u.rows.map(r => r.right));
+    u.height = u.rows.reduce((n, r) => n + r.h, 0) + GROUP_GAP * (u.rows.length - 1);
+    if (u.manual) { u.pref = u.rows[0].pref; u.lane = u.pref + u.height / 2 >= 0 ? 1 : 0; }
+  }
+  // 3) 위·아래에 필요한 높이를 따로 재서 판 높이와 줄 자리를 정한다
+  const ext = expPack(units, gap, ropeGap);
+  const half = Math.floor(base / 2);
+  const topH = Math.max(half, Math.ceil(ext.top + 10)), bottomH = Math.max(base - half, Math.ceil(ext.bottom + 14));
+  const rope = topH, total = topH + bottomH;
+  board.style.height = total + 'px';
+  for (const u of units) { let y = rope + u.dist; for (const r of u.rows) { r.el.style.top = y + 'px'; y += r.h + GROUP_GAP; } }
+  for (const el of board.querySelectorAll('.rope,.flag,.scale')) el.style.top = rope + 'px';
+  const lt = $('#b-lane-top'), lb = $('#b-lane-bot');
+  lt.style.top = Math.max(0, rope - half) + 'px'; lt.style.bottom = (total - rope) + 'px';
+  lb.style.top = rope + 'px'; lb.style.bottom = Math.max(0, total - rope - half) + 'px';
+  // 4) 스크롤: 읽던 카드는 화면의 같은 자리에 둔다. 새 답이 와도 따라 내려가지 않는다. 처음 늘어날 때는 줄을 가운데에
+  let st;
+  if (!fresh) {
+    const el = anchor.id ? board.querySelector('.card[data-id="' + anchor.id + '"]') : null;
+    st = el ? anchor.scroll + (el.offsetTop - anchor.off) : anchor.scroll + (rope - anchor.rope);
+  } else st = rope - sc.clientHeight / 2;
+  sc.scrollTop = Math.max(0, Math.min(total - sc.clientHeight, st));
+  const tall = total > base + 1;
+  EXP.boardId = tall ? g.id : null; // 다 들어가게 됐으면 다음에는 한 화면 판부터 다시 살핀다
+  EXP.rope = rope; EXP.height = total; EXP.base = base;
+  expStrip(board);
+  if (fresh && tall && !EXP.hinted.has(g.id)) { EXP.hinted.add(g.id); toast('카드가 많아 판을 세로로 늘렸어요. 위아래로 스크롤하면 모두 볼 수 있어요.', 3200); }
+}
+// 예전 배치(한 화면 판)를 마친 뒤: 넘치면 늘린 판으로 바꾼다.
+// 돌려주는 값이 true면, 늘려 두었던 판이 이제 한 화면에 다 들어간다는 뜻 → 부른 쪽이 한 화면 판으로 한 번 더 그린다(끌기·묶기가 바로 돌아오게)
+function expAfterLayout(board, vis, ls, sticky, anchor) {
+  if (sticky || (EXP.on && vis.length && boardOverflows(board, T.g))) { expLayout(board, vis, ls, anchor); return sticky && EXP.boardId === null; }
+  EXP.boardId = null; expReset(board); return false;
+}
+// 스크롤해도 쪽·세기·지금 보는 곳을 알 수 있게 판 위에 고정해 두는 안내 줄
+function expStrip(board) {
+  const g = T.g, ticks = $('#xs-ticks');
+  $('#xs-l').textContent = '◀ ' + g.left; $('#xs-r').textContent = g.right + ' ▶';
+  ticks.style.width = (board.clientWidth || 0) + 'px';
+  if (!ticks.dataset.ready) {
+    ticks.dataset.ready = '1'; let h = '<i></i>';
+    for (const side of ['L', 'R']) for (let s = 1; s <= 5; s++) h += '<span class="' + side + '" style="left:' + colX(side, s) + '%">' + scaleLabel(s) + '</span>';
+    ticks.innerHTML = h;
+  }
+  expWhere();
+}
+// 가려 둔 추가 질문 글은 싣지 않는다(번호만). 가림 중에는 lastStage()가 0이라 「처음 생각」만 나온다
+function expWhere() {
+  if (!T.g || !expShown()) return;
+  const sc = $('#board-scroll'), ls = lastStage(), top = sc.scrollTop, bottom = top + sc.clientHeight;
+  // 줄이 화면에 보이면 위·아래를 함께, 줄에서 멀어지면 지금 보이는 쪽만 알린다
+  $('#xs-where').textContent = !ls ? '처음 생각' : EXP.rope < top ? '줄 아래 · 만약에 생각 (추가 질문 ' + ls + ')' : EXP.rope > bottom ? '줄 위 · 처음 생각' : '줄 위 처음 생각 · 줄 아래 만약에 생각 (추가 질문 ' + ls + ')';
+}
+(function expWire() {
+  let raf = 0; const later = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : f => setTimeout(f, 50);
+  $('#board-scroll').addEventListener('scroll', () => { if (raf) return; raf = later(() => { raf = 0; expWhere(); }); });
+  $('#xs-rope').onclick = () => { const sc = $('#board-scroll'), top = Math.max(0, EXP.rope - sc.clientHeight / 2); if (sc.scrollTo) sc.scrollTo({ top, behavior: 'smooth' }); else sc.scrollTop = top; };
+  $('#t-expand').onclick = () => {
+    EXP.on = !EXP.on; if (!EXP.on) EXP.boardId = null; if (T.g) renderBoard();
+    toast(EXP.on ? '카드가 판에 다 들어가지 않으면 판을 세로로 늘려요' : '한 화면 판으로 돌아왔어요. 카드 끌기·묶기를 쓸 수 있어요. 카드가 많으면 겹쳐 쌓여요', 3200);
+  };
+})();
 function renderBoard() {
   const g = T.g; if (!g) return;
   const board = $('#board');
+  const expAnc = expAnchor(board); // 늘어난 판에서 읽던 자리(다시 그린 뒤 되돌린다)
+  { const xb = $('#t-expand'); xb.classList.toggle('on', EXP.on); xb.textContent = EXP.on ? '자동 확장: 켜짐' : '자동 확장: 꺼짐'; xb.setAttribute('aria-pressed', String(EXP.on)); }
   $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#t-activate').classList.toggle('now',T.viewedBoardId===T.room.activeBoardId); $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
   const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=upWhatif(g), paused=!wf&&initialLocked(g);
@@ -1295,6 +1488,7 @@ function renderBoard() {
   $('#board-view').classList.toggle('phone', phone);
   $('#board-view').classList.toggle('land', phone && isPhoneLandscape());
   if (phone) {
+    EXP.boardId = null; expReset(board);
     $('#links').innerHTML = '';
     $('#b-count').textContent = g.cards.filter(onBoard).length;
     updateSelbar();
@@ -1302,6 +1496,9 @@ function renderBoard() {
     return;
   }
   $('#phone-board').innerHTML = '';
+  // 지난번에 판이 넘쳐 늘려 두었으면 이번에도 늘린 판으로 바로 그린다. 아니면 한 화면 판으로 그려 보고 넘치는지 살핀다
+  const expSticky = EXP.on && EXP.boardId === g.id;
+  if (!expSticky) { EXP.boardId = null; expReset(board); }
   for (let s = 1; s <= 5; s++) for (const side of ['L', 'R']) {
     const e = document.createElement('div'); e.className = 'scale'; e.style.left = colX(side, s) + '%'; e.textContent = scaleLabel(s); board.appendChild(e);
   }
@@ -1340,6 +1537,7 @@ function renderBoard() {
       (g.showNames && c.name ? `<span class="nm">${esc(c.name)}</span>` : '') + '</div>';
     board.appendChild(e);
   });
+  if (!expSticky) {
   // 자동 배치 카드는 실제 높이를 재서 같은 칸 안에 쌓는다(처음 생각은 줄 위, 만약에 생각은 줄 아래).
   // 한 칸에 카드가 많아 판을 넘치면 카드를 겡쳐 쌓아 첫 줄이 보이게 하고, 누르면(선택) 앞으로 나온다.
   const H = board.clientHeight || 600, gap = 8, mid = H / 2, MINSTEP = 18 * (g.fs || 1);
@@ -1385,6 +1583,8 @@ function renderBoard() {
     }
   }
   settleBoardOverlaps(board, vis, ls, topLim, botLim, H);
+  }
+  if (expAfterLayout(board, vis, ls, expSticky, expAnc)) return renderBoard(); // 두 번째는 한 화면 판부터 살피므로 되풀이되지 않는다
   drawLinks(board, pairs);
   updateSelbar();
 }
@@ -1631,19 +1831,24 @@ function drawLinks(board, pairs) {
   svg.innerHTML = h;
   drawHistoryGhosts(board,svg);
 }
-function drawHistoryGhosts(board,svg) {const w=board.clientWidth,h=board.clientHeight;for(const id of T.sel){const c=T.g.cards.find(c=>c.id===id);if(!c||!movement(c).moved)continue;const states=c.history.filter((s,i,a)=>!i||s.side!==a[i-1].side||s.strength!==a[i-1].strength),y=(lastStage()?(stageOf(c)?.7:.3):.45)*h;let prev=null;states.forEach((s,i)=>{const x=colX(s.side,s.strength)*w/100;if(prev!==null)svg.innerHTML+='<path d="M'+prev+','+y+' L'+x+','+y+'" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 4" fill="none"/>';if(i<states.length-1)svg.innerHTML+='<circle cx="'+x+'" cy="'+y+'" r="14" fill="white" fill-opacity=".5" stroke="#7c3aed" stroke-width="3"/><text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" fill="#7c3aed" font-size="11">'+(i+1)+'</text>';prev=x;});}}
+function drawHistoryGhosts(board,svg) {const w=board.clientWidth,h=board.clientHeight;for(const id of T.sel){const c=T.g.cards.find(c=>c.id===id);if(!c||!movement(c).moved)continue;const states=c.history.filter((s,i,a)=>!i||s.side!==a[i-1].side||s.strength!==a[i-1].strength),y=expShown()?EXP.rope+(lastStage()?(stageOf(c)?.2:-.2):-.05)*EXP.base:(lastStage()?(stageOf(c)?.7:.3):.45)*h;let prev=null;states.forEach((s,i)=>{const x=colX(s.side,s.strength)*w/100;if(prev!==null)svg.innerHTML+='<path d="M'+prev+','+y+' L'+x+','+y+'" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 4" fill="none"/>';if(i<states.length-1)svg.innerHTML+='<circle cx="'+x+'" cy="'+y+'" r="14" fill="white" fill-opacity=".5" stroke="#7c3aed" stroke-width="3"/><text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" fill="#7c3aed" font-size="11">'+(i+1)+'</text>';prev=x;});}}
 function updateSelbar() {
   for (const id of [...T.sel]) if (!T.g.cards.some(c => c.id === id && onBoard(c))) T.sel.delete(id);
   $('#selbar').classList.toggle('hide', T.sel.size === 0);
   $('#sel-n').textContent = T.sel.size + '장 선택';
   $('#s-ungroup').disabled = ![...T.sel].some(id => T.g.cards.find(c => c.id === id)?.group);
-  $('#s-group').disabled = T.sel.size < 2;
+  const read = expShown();
+  $('#s-group').disabled = T.sel.size < 2 || read;
+  $('#s-group').title = read ? '늘어난 판에서는 묶기를 쉬어요. 「보기 설정 → 자동 확장」을 끄면 쓸 수 있어요.' : '';
 }
 // 드래그 / 선택
 (function boardPointer() {
   const board = $('#board'); let d = null;
   board.addEventListener('pointerdown', e => {
     const el = e.target.closest('.card');
+    if (d && d.read) d = null; // 판 밖에서 손을 떼어 남은 읽기용 누름 상태는 버린다
+    // 늘어난 판(읽기용): 끌지 않는다. 손가락으로 밀면 스크롤, 제자리에서 떼면 누른 것으로 본다
+    if (expShown()) { const c = el && T.g.cards.find(x => x.id === el.dataset.id); d = { read: true, id: c ? c.id : null, sx: e.clientX, sy: e.clientY, moved: false, mouse: e.pointerType === 'mouse' }; return; }
     if (!el) { if (T.sel.size) { T.sel.clear(); renderBoard(); } return; }
     const c = T.g.cards.find(x => x.id === el.dataset.id); if (!c) return;
     const rect = board.getBoundingClientRect();
@@ -1656,13 +1861,22 @@ function updateSelbar() {
   board.addEventListener('pointermove', e => {
     if (!d) return;
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (d.read && d.mouse && e.buttons === 0) { d = null; return; } // 판 밖에서 단추를 뗀 뒤 지나가는 움직임
     if (!d.moved && Math.hypot(dx, dy) < 6) return;
     d.moved = true;
+    if (d.read) { if (d.mouse && d.id && !EXP.dragHint) { EXP.dragHint = true; toast('늘어난 판에서는 카드를 끌 수 없어요. 「보기 설정 → 자동 확장」을 끄면 끌기·묶기를 쓸 수 있어요.', 4200); } return; }
     const px = dx / d.rect.width * 100, py = dy / d.rect.height * 100;
     for (const m of d.members) { const o = d.cur[m.id]; if (!o) continue; o.el.classList.add('drag'); o.el.style.left = (o.x + px) + '%'; o.el.style.top = (o.y + py) + '%'; }
   });
   const end = e => {
     if (!d) return;
+    if (d.read) {
+      const tap = !d.moved && !(e && e.type === 'pointercancel'), id = d.id; d = null;
+      if (!tap) return;
+      if (id) { T.sel.has(id) ? T.sel.delete(id) : T.sel.add(id); renderBoard(); }
+      else if (T.sel.size) { T.sel.clear(); renderBoard(); }
+      return;
+    }
     if (d.moved) {
       for (const m of d.members) { const o = d.cur[m.id]; if (!o) continue; m.x = Math.max(2, Math.min(98, parseFloat(o.el.style.left))); m.y = Math.max(1, Math.min(96, parseFloat(o.el.style.top))); }
       saveGame(); renderBoard();
@@ -1675,6 +1889,7 @@ function updateSelbar() {
 })();
 function groupSelected() {
   const ids = [...T.sel]; if (ids.length < 2) return;
+  if (expShown()) return toast('늘어난 판에서는 묶기를 쉬어요. 「보기 설정 → 자동 확장」을 끄면 쓸 수 있어요.', 3200);
   const label = (prompt('묶음 이름 (비워 두어도 돼요)', '') ?? null); if (label === null) return;
   const used = Object.values(T.g.groups).map(x => x.color);
   const color = PALETTE.find(c => !used.includes(c)) || PALETTE[Object.keys(T.g.groups).length % PALETTE.length];
@@ -1807,7 +2022,14 @@ async function exportPNG() {
   T.sel.clear(); renderBoard();
   if (extraMasked()) toast('추가 질문을 가린 화면 그대로 저장해요. 만약에 생각까지 담으려면 가리기를 끄고 다시 저장해 주세요.');
   const target = $('#board-view');
-  const canvas = await html2canvas(target, { backgroundColor: '#ffffff', scale: 2, ignoreElements: el => el.classList?.contains('tools') || el.id === 'selbar' });
+  // 늘어난 판은 보이는 부분만이 아니라 판 전체를 담는다(틀을 잠시 풀고, 아주 긴 판은 해상도를 낮춰 브라우저 한도를 넘지 않게 한다)
+  const tall = expShown(), sc = $('#board-scroll'), keep = sc.scrollTop;
+  let canvas;
+  if (tall) target.classList.add('exporting');
+  try {
+    const full = tall ? target.scrollHeight : 0;
+    canvas = await html2canvas(target, { backgroundColor: '#ffffff', scale: tall && full > 6000 ? 1 : 2, ...(tall ? { height: full, windowHeight: full } : {}), ignoreElements: el => el.classList?.contains('tools') || el.id === 'selbar' || el.id === 'xs-rope' });
+  } finally { if (tall) { target.classList.remove('exporting'); sc.scrollTop = keep; } }
   canvas.toBlob(b => download(fileBase() + '.png', b));
 }
 function exportMenu() {
