@@ -1204,7 +1204,7 @@ function bigSideModel(g, B) {
   const st = B.sideStage, L = bigSideCards(g, st, 'L'), R = bigSideCards(g, st, 'R');
   const pages = Math.max(1, Math.ceil(Math.max(L.length, R.length) / BIG_PER_COL));
   B.page = Math.min(Math.max(0, B.page || 0), pages - 1);
-  const seq = L.concat(R), one = g.share && B.one ? seq.find(c => c.id === B.one) || null : null; if (!one) B.one = null;
+  const seq = L.concat(R), one = B.one ? seq.find(c => c.id === B.one) || null : null; if (!one) B.one = null;
   return { qs, st, wf: st ? qs.find(q => q.stage === st) : null, L, R, pages, seq, one };
 }
 function renderBig() {
@@ -1235,11 +1235,8 @@ function renderBig() {
     '<div class="bq-strip" aria-hidden="true"><i></i><b></b></div>';
   const label = st ? '추가 질문 ' + st + '의 생각' : '처음 생각';
   let body, info, nav = '';
-  if (!g.share) {
-    // 「친구 근거: 꺼짐」이면 판과 같이 근거 글을 큰 화면에 올리지 않는다
-    body = '<div class="bq-onewrap"><div class="bq-none">「친구 근거」가 꺼져 있어 근거 글을 띄우지 않아요.<br>판에서 「친구 근거: 켜짐」으로 바꾸면 여기에 보여요.</div></div>';
-    info = label;
-  } else if (m.one) {
+  // 교사 「양쪽 근거」 읽기는 학생 친구 근거 공유와 독립이다. 공유 상태는 바꾸지 않는다.
+  if (m.one) {
     const c = m.one, i = m.seq.indexOf(c);
     body = '<div class="bq-onewrap"><div class="bq-one ' + c.side + '"><div class="bq-one-end">' + (c.side === 'L' ? '◀ ' + esc(g.left) : esc(g.right) + ' ▶') + bigDots(c.strength) + who(c) + '</div><div class="bq-one-t">' + esc(c.text) + '</div></div></div>';
     info = label + ' · 한 장 크게 · Esc 목록으로';
