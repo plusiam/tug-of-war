@@ -380,6 +380,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #board-view.phone.land .question-stack .whatif-bar{font-size:16px;margin-top:7px;padding:5px 10px}
 #board-view.phone.land .question-stack .qh-meta{margin-bottom:2px;font-size:12px}
 
+.late-initial{display:block;font-size:12px;color:#805500;font-weight:700}.c-late{background:#fff3bf;color:#805500}#b-participants{padding:6px 16px;background:#fff;border-bottom:1px solid var(--line);font-size:13px}#b-participants details>div{padding:3px 0}#b-participants details{max-height:240px;overflow:auto}
 </style>
 </head>
 <body>
@@ -443,7 +444,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
     </div>
   </div>
   <div class="countbar" id="b-countbar"></div>
-  <div class="stagebar" id="b-stagebar"></div>
+  <div id="b-participants"></div><div class="stagebar" id="b-stagebar"></div>
   <div id="board">
     <div class="lane top" id="b-lane-top"><b>처음 생각</b></div>
     <div class="lane bot" id="b-lane-bot"></div>
@@ -730,7 +731,10 @@ function cardRejection(room,p) {
  const c=b.cards.find(c=>c.id===p.id), stage=p.stage??0;
  const exact=c&&c.sid===p.sid&&stageOf(c)===stage&&c.rev===p.rev&&c.side===p.side&&c.strength===p.strength&&c.text===p.text;
  if(exact)return null; // An identical retry remains acknowledged after closure.
- if(b.deletedAt!==undefined||b.id!==room.activeBoardId||stage!==boardInputStage(b)||(stage===0&&initialLocked(b)))return {code:'closed',message:'이전 단계는 읽기 전용이에요. 쓰던 글은 보관했어요. 현재 질문에 답해 주세요.'};
+ const own=b.cards.filter(c=>c.sid===p.sid), missing=!initialCard(own)&&!own.some(c=>stageOf(c)>0);
+ if(stage>0&&missing)return {code:'initialRequired',message:'처음 답을 먼저 보내 주세요. 현재 추가 질문은 처음 답이 도착한 뒤 답할 수 있어요.'};
+ const lateNew=stage===0&&!c&&missing&&boardInputStage(b)>0;
+ if(b.deletedAt!==undefined||b.id!==room.activeBoardId||(!lateNew&&(stage!==boardInputStage(b)||(stage===0&&initialLocked(b)))))return {code:'closed',message:'이전 단계는 읽기 전용이에요. 쓰던 글은 보관했어요. 현재 질문에 답해 주세요.'};
  const canonical=stageCard(b.cards.filter(c=>c.sid===p.sid),stage);
  if(canonical&&canonical.id!==p.id)return {code:'duplicate',message:'이번 단계에 이미 보낸 카드가 있어요. 새로고침 후 이번 생각 수정으로 고쳐 주세요.'};
  if(c&&p.rev<=c.rev)return {code:'revision',message:'더 최신 응답이 있어요. 쓰던 글은 보관했어요. 새로고침해 주세요.'};
@@ -745,7 +749,7 @@ function cfgPayload() {
 let cfgTimer=null, boardTimer=null, boardLast=0;
 function pushConfig(){clearTimeout(cfgTimer);cfgTimer=setTimeout(()=>{if(!T.room||T.room.offline)return;boardLast=Date.now();sendTo(topicAll(T.room.code),'config',cfgPayload());},150);}
 function pushBoardSoon(){if(!activeBoard()?.share||boardTimer)return;boardTimer=setTimeout(()=>{boardTimer=null;pushConfig();},Math.max(300,4000-(Date.now()-boardLast)));}
-function ackTo(p,rev,boardId){const sid=cleanSid(p.sid);if(sid&&T.room)sendTo(topicMe(T.room.code,sid),'ack',{id:p.id,rev,boardId,configSeq:T.room.configSeq});}
+function ackTo(p,rev,boardId){const sid=cleanSid(p.sid);if(sid&&T.room)sendTo(topicMe(T.room.code,sid),'ack',{id:p.id,rev,boardId,configSeq:T.room.configSeq,lateInitial:!!routeBoard(T.room,p)?.cards.find(c=>c.id===p.id)?.lateInitial});}
 
 
 // 접속 코드에 누가 답하는지 듣는다. 구독이 끝난 뒤에 hello를 보내고, 그때부터 listenMs 동안 기다린다.
@@ -783,8 +787,20 @@ function openBoard(){
  subscribeTeacher();
  renderBoard();
 }
+const participants=new Map();
+const participantKey=(room,b)=>'tow:participants:'+room.storageId+':'+b.id;
+function enteredParticipants(room,b){const key=participantKey(room,b);if(!participants.has(key)){const saved=LS.get(key);participants.set(key,new Map((Array.isArray(saved)?saved:[]).filter(x=>Array.isArray(x)&&safeId(x[0])&&typeof x[1]==='string').map(([sid,name])=>[sid,name.slice(0,12)])));}return participants.get(key);}
+function participantRows(room,b){
+ const entered=new Map(enteredParticipants(room,b));
+ b.cards.forEach(c=>entered.set(c.sid,c.name||entered.get(c.sid)||'익명'));
+ const stage=boardInputStage(b),paused=initialLocked(b)&&!stage;
+ return [...entered].map(([sid,name])=>{const own=b.cards.filter(c=>c.sid===sid),first=initialCard(own),legacy=!first&&own.some(c=>stageOf(c)>0),done=!!stageCard(own,stage);
+ return {sid,name,status:paused?'응답 잠시 멈춤':stage?(!first&&!legacy?'처음 답 작성 중':done?'이번 추가 질문 제출 완료':'추가 질문 '+stage+' 답변 중'):done?'처음 질문 제출 완료':'처음 답 작성 중',legacy};});
+}
+function renderParticipants(){if(!T.room||!T.g)return;let el=$('#b-participants');if(!el){el=document.createElement('div');el.id='b-participants';$('#b-stagebar').parentNode.appendChild(el);}const wasOpen=!!el.querySelector('details')?.open;const rows=participantRows(T.room,T.g),counts={};rows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);el.innerHTML='<details><summary>입장한 학생 기준 · 제출 여부 · '+rows.length+'명 · '+Object.entries(counts).map(([s,n])=>esc(s)+' '+n+'명').join(' · ')+'</summary><p class="note">입장 신호와 수락된 카드 기준입니다. 접속 중 여부나 타이핑을 감지하지 않아요. 같은 SID는 같은 학생으로 셉니다.</p>'+rows.map(r=>'<div>'+esc(r.name)+' · '+esc(r.status)+(r.legacy?' · 이전 기록: 처음 답 없음':'')+'</div>').join('')+'</details>';el.querySelector('details').open=wasOpen;}
 function onHello(p){
- const sid=cleanSid(p.sid);if(sid)sendTo(topicMe(T.room.code,sid),'config',cfgPayload());if(sid&&!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,sid),'refresh',{message:'새 질문판이 시작됐어요. 이 페이지를 새로고침해 주세요.'});
+ const sid=cleanSid(p.sid);if(sid&&!p.probe){const b=activeBoard(),entered=enteredParticipants(T.room,b);entered.set(sid,String(p.name||'익명').slice(0,12));LS.set(participantKey(T.room,b),[...entered]);renderParticipants();}
+ if(sid)sendTo(topicMe(T.room.code,sid),'config',{...cfgPayload(),...(!p.probe?{personalCards:activeBoard().cards.filter(c=>c.sid===sid).map(c=>({id:c.id,boardId:c.boardId,text:c.text,side:c.side,strength:c.strength,rev:c.rev,stage:stageOf(c),from:c.from||null,lateInitial:!!c.lateInitial}))}:{})});if(sid&&!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,sid),'refresh',{message:'새 질문판이 시작됐어요. 이 페이지를 새로고침해 주세요.'});
  // 다른 수업이 같은 코드로 겹침 확인(probe)을 보냈다면, 받는 쪽도 같은 규칙으로 누가 코드를 바꿀지 정한다
  if(p.probe&&safeId(p.roomId)&&p.roomId!==T.room.storageId)onCodeClash({roomId:p.roomId,created:p.roomCreated});
 }
@@ -982,10 +998,10 @@ function acceptCard(room,p,now=Date.now()) {
  if(c&&c.rev===p.rev)return {board:b,card:c,changed:false};
  const text=p.text, name=String(p.name||'').slice(0,12);
  if(c){const moved=c.side!==p.side||c.strength!==p.strength;if(moved||c.text!==text)c.history.push({side:p.side,strength:p.strength,text,phase:stage,t:now});Object.assign(c,{side:p.side,strength:p.strength,text,name,rev:p.rev});if(moved&&!c.group){delete c.x;delete c.y;}}
- else{const parent=stage>0?initialCard(b.cards.filter(c=>c.sid===p.sid)):null;c={id:p.id,boardId:b.id,sid:p.sid,name,text,side:p.side,strength:p.strength,rev:p.rev,phase:stage,stage,from:parent?.id||null,likes:[],hidden:false,history:[{side:p.side,strength:p.strength,text,phase:stage,t:now}]};b.cards.push(c);}
+ else{const parent=stage>0?initialCard(b.cards.filter(c=>c.sid===p.sid)):null;c={id:p.id,boardId:b.id,sid:p.sid,name,text,side:p.side,strength:p.strength,rev:p.rev,phase:stage,stage,from:parent?.id||null,likes:[],hidden:false,history:[{side:p.side,strength:p.strength,text,phase:stage,t:now}]};if(stage===0&&initialLocked(b))c.lateInitial=true;b.cards.push(c);}
  return {board:b,card:c,changed:true};
 }
-function onCard(p){if(T.room?.offline)return;const r=acceptCard(T.room,p);if(!r){if(safeId(p.id)&&safeId(p.sid)){const reason=cardRejection(T.room,p)||{code:'invalid',message:'이 응답은 받지 못했어요. 내용을 확인해 주세요.'};const b=routeBoard(T.room,p),canonical=b&&stageCard(b.cards.filter(c=>c.sid===p.sid),p.stage??0);sendTo(topicMe(T.room.code,p.sid),'cardRejected',{id:p.id,rev:p.rev,boardId:p.boardId||T.room.legacyBoardId,...reason,...(['duplicate','revision','closed'].includes(reason.code)&&canonical?{acceptedCard:{id:canonical.id,boardId:b.id,text:canonical.text,side:canonical.side,strength:canonical.strength,rev:canonical.rev,stage:stageOf(canonical),from:canonical.from||null}}:{})});sendTo(topicMe(T.room.code,p.sid),'refresh',{message:reason.message});}return;}if(!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,p.sid),'refresh',{message:'새 질문판이 시작됐어요. 새로고침해 주세요.'});if(r.changed){saveGame();if(r.board.id===T.viewedBoardId)renderBoard();}ackTo(p,r.card.rev,r.board.id);if(r.board.id===T.room.activeBoardId)pushBoardSoon();}
+function onCard(p){if(T.room?.offline)return;const r=acceptCard(T.room,p);if(!r){if(safeId(p.id)&&safeId(p.sid)){const reason=cardRejection(T.room,p)||{code:'invalid',message:'이 응답은 받지 못했어요. 내용을 확인해 주세요.'};const b=routeBoard(T.room,p),canonical=b&&stageCard(b.cards.filter(c=>c.sid===p.sid),p.stage??0);sendTo(topicMe(T.room.code,p.sid),'cardRejected',{id:p.id,rev:p.rev,boardId:p.boardId||T.room.legacyBoardId,...reason,...(['duplicate','revision','closed'].includes(reason.code)&&canonical?{acceptedCard:{id:canonical.id,boardId:b.id,text:canonical.text,side:canonical.side,strength:canonical.strength,rev:canonical.rev,stage:stageOf(canonical),from:canonical.from||null,lateInitial:!!canonical.lateInitial}}:{})});if(reason.code==='initialRequired')onHello(p);sendTo(topicMe(T.room.code,p.sid),'refresh',{message:reason.message});}return;}if(!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,p.sid),'refresh',{message:'새 질문판이 시작됐어요. 새로고침해 주세요.'});if(r.changed){saveGame();if(r.board.id===T.viewedBoardId)renderBoard();}ackTo(p,r.card.rev,r.board.id);if(r.board.id===T.room.activeBoardId)pushBoardSoon();}
 function onLike(p){if(T.room?.offline)return;const b=routeBoard(T.room,p),c=b?.cards.find(c=>c.id===p.id);if(!c||!safeId(p.sid)||typeof p.on!=='boolean')return;const i=c.likes.indexOf(p.sid);if(p.on&&i<0)c.likes.push(p.sid);else if(!p.on&&i>=0)c.likes.splice(i,1);saveGame();if(b.id===T.viewedBoardId)renderBoard();if(b.id===T.room.activeBoardId)pushBoardSoon();}
 function movement(c){let moved=false,edited=false;for(let i=1;i<c.history.length;i++){const a=c.history[i-1],b=c.history[i];if(a.side!==b.side||a.strength!==b.strength)moved=true;else if(a.text!==b.text)edited=true;}return {moved,edited,returned:moved&&c.history[0].side===c.side&&c.history[0].strength===c.strength};}
 
@@ -1057,10 +1073,11 @@ function questionHeadingHTML(question,current,note='',nowLabel='지금 답할 �
   return '<span class="qh-meta"><span class="qh-label">처음 질문</span>'+(current?'<span class="qh-now">'+esc(nowLabel)+'</span>':'')+(note?'<span class="qh-label">'+esc(note)+'</span>':'')+'</span><span class="qh-text">'+esc(question)+'</span>';
 }
 function extraQuestionHTML(text,stage,current,note='',nowLabel='지금 답할 질문') {
-  return '<span class="qh-meta"><span class="qh-label">추가 질문 '+stage+'</span>'+(current?'<span class="qh-now">'+esc(nowLabel)+'</span>':'')+(note?'<span class="qh-label">'+esc(note)+'</span>':'')+'</span><span class="wf-lead wf-l">그런데 만약에?</span><span class="qh-text wf-t">'+esc(text)+'</span><span class="qh-help">이 조건을 생각하며 처음 질문에 대한 지금 생각을 적어요.</span>';
+  return '<span class="qh-meta"><span class="qh-label">추가 질문 '+stage+'</span>'+(current?'<span class="qh-now">'+esc(nowLabel)+'</span>':'')+(note?'<span class="qh-label">'+esc(note)+'</span>':'')+'</span><span class="wf-lead wf-l">그런데 만약에?</span><span class="qh-text wf-t">'+esc(text)+'</span><span class="qh-help">'+(note==='선생님이 제시한 추가 질문'?'처음 답을 먼저 보내면 이 추가 질문에 답할 수 있어요.':'이 조건을 생각하며 처음 질문에 대한 지금 생각을 적어요.')+'</span>';
 }
-function studentQuestionEcho(c,open) {
+function studentQuestionEcho(c,open,target=c.stage||0) {
   const first='<span class="e-q"><small>처음 질문</small>'+esc(c.question)+'</span>';
+  if(c.whatif&&target===0)return '<span class="e-main"><small>'+(open?'지금 답할 질문 · 처음 질문':'응답 잠시 멈춤')+'</small>'+esc(c.question)+'</span><span class="e-q"><small>선생님이 제시한 추가 질문 · 추가 질문 '+c.stage+'</small>'+esc(c.whatif)+'</span>';
   return c.whatif ? first+'<span class="e-main"><small>지금 답할 질문 · 추가 질문 '+(c.stage||0)+'</small>'+esc(c.whatif)+'</span>' : open?'<span class="e-main"><small>지금 답할 질문 · 처음 질문</small>'+esc(c.question)+'</span>':first+'<span class="e-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
 }
 function renderBoard() {
@@ -1079,7 +1096,7 @@ function renderBoard() {
   $('#t-share').setAttribute('aria-pressed', String(!!g.share));
   $('#b-whatif').classList.toggle('show', !!wf||paused);
   $('#b-whatif').innerHTML=wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'':'보관 중 · 학생 응답 아님','학생이 지금 답할 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
-  renderCounts(); renderStageBar();
+  renderCounts(); renderStageBar();renderParticipants();
   const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
   // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
   const older = wfs.filter(w => w !== WF_GONE).length >= 2 ? 0 : g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== ls).length;
@@ -1132,7 +1149,7 @@ function renderBoard() {
     const chg = changeOf(c), chgCls = { '그대로': 'same', '세기 바뀜': 'str', '쪽 바뀜': 'side', '새 근거': 'new' }[chg];
     e.innerHTML = (grp ? `<span class="tag" style="background:${grp.color}">${esc(grp.label || '묶음')}</span><br>` : '') +
       `<span class="tx">${esc(c.text)}</span>` +
-      `<div class="meta"><span class="who">${esc(c.name || '익명')}</span><span class="str">${strDots}</span>` +
+      `${c.lateInitial?'<span class="late-initial" title="추가 질문 제시 뒤 교사 화면에 도착한 첫 답 기준이며 실제 작성 시각을 측정한 것은 아닙니다.">추가 질문 제시 후 작성</span>':''}<div class="meta"><span class="who">${esc(c.name || '익명')}</span><span class="str">${strDots}</span>` +
       (chg ? `<span class="chg ${chgCls}">${chg}</span>` : '') +
       (moved ? `<span class="moved" title="처음 보낸 자리: ${c.history[0].side === 'L' ? esc(g.left) : esc(g.right)} ${c.history[0].strength}">↔ ${mark.returned ? '원래 자리로 돌아옴' : '다시 놓음'}</span>` : '') +
       (!moved && mark.edited ? '<span class="text-edit">✎ 근거 수정</span>' : '') +
@@ -1284,6 +1301,7 @@ function phoneRowHTML(g, c, open, ls) {
   const dots = '<i>' + '●'.repeat(c.strength) + '</i>' + '○'.repeat(5 - c.strength);
   const chgCls = { '그대로': 'c-same', '세기 바뀜': 'c-str', '쪽 바뀜': 'c-side', '새 근거': 'c-new' }[v.chg];
   const badges = [
+    c.lateInitial && '<span class="c-late" title="추가 질문 제시 뒤 교사 화면에 도착한 첫 답 기준이며 실제 작성 시각을 측정한 것은 아닙니다.">추가 질문 제시 후 작성</span>',
     v.chg && `<span class="${chgCls}">${v.chg}</span>`,
     v.prev && `<span class="c-prev">${esc(v.prev)}</span>`,
     v.moved && `<span class="c-moved" title="처음 보낸 자리: ${esc(v.firstSent)}">↔ ${v.moved}</span>`,
@@ -1495,7 +1513,7 @@ function exportRows() {
     const path = c.history.map(h => `${sideName(h.side)} ${h.strength}`).join(' → ');
     const par = c.from && T.g.cards.find(x => x.id === c.from);
     return { 번호: n, 이름: who, 단계: st ? `만약에 ${st}` : '처음 생각', 쪽: sideName(c.side), 세기: c.strength, 위치: (c.side === 'L' ? '-' : '+') + c.strength,
-      근거: c.text, 이어진처음생각: par && num[par.id] ? num[par.id] + '번' : '', 변화: changeOf(c),
+      근거: c.text, 처음답작성시점:c.lateInitial?'추가 질문 제시 후 작성':'', 비교주의:(c.lateInitial||par?.lateInitial)?'처음 답이 추가 질문 제시 후 기록됨':st&&!par?'이전 기록: 처음 답 없음':'', 이어진처음생각: par && num[par.id] ? num[par.id] + '번' : '', 변화: changeOf(c),
       다시놓은기록: c.history.length > 1 ? path : '', 처음근거: first.text !== c.text ? first.text : '',
       공감: (c.likes || []).length, 묶음: c.group ? (T.g.groups[c.group]?.label || '묶음') : '' };
   });
@@ -1503,7 +1521,7 @@ function exportRows() {
 function countLines() {
   const s0 = stageStats(0), cs = changeSummary(latestStage(T.g)), L = [`- 처음 생각(학생 수): ${T.g.left} ${s0.L}명, ${T.g.right} ${s0.R}명`];
   if (cs) L.push(`- 만약에 생각(학생 수): ${T.g.left} ${cs.sk.L}명, ${T.g.right} ${cs.sk.R}명 (참여 ${cs.sk.n}/${cs.all}명)`, `- 변화(학생 수): 쪽이 바뀜 ${cs.side}명, 세기만 바뀜 ${cs.str}명, 그대로 ${cs.same}명, 새 근거만 ${cs.fresh}명, 아직 안 보냄 ${cs.wait}명`);
-  L.push('- 학생 수는 학생마다 그 단계의 카드 1장으로 셈(만약에는 처음 생각과 이어진 카드 우선, 없으면 가장 최근 카드. 세기 무관, 숨긴 카드 제외)');
+  L.push('- 추가 질문 제시 후 작성한 처음 답은 표시하여 포함하며, 추가 질문 노출 전 기준으로 해석하지 않습니다.\n- 학생 수는 학생마다 그 단계의 카드 1장으로 셈(만약에는 처음 생각과 이어진 카드 우선, 없으면 가장 최근 카드. 세기 무관, 숨긴 카드 제외)');
   return L;
 }
 function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
@@ -1523,7 +1541,7 @@ function exportText() {
   const groups = Object.values(T.g.groups); if (groups.length) L.push(`- 교사가 묶은 묶음: ${groups.map(x => x.label || '이름 없음').join(', ')}`);
   L.push(...countLines());
   L.push('', '| 번호 | 이름 | 단계 | 쪽 | 세기 | 근거 | 이어진 처음 생각 | 변화 | 다시 놓은 기록 | 공감 | 묶음 |', '|---|---|---|---|---|---|---|---|---|---|---|');
-  for (const r of rows) L.push(`| ${r.번호} | ${r.이름} | ${r.단계} | ${r.쪽} | ${r.세기} | ${r.근거.replace(/\|/g, '/')}${r.처음근거 ? ` (처음: ${r.처음근거.replace(/\|/g, '/')})` : ''} | ${r.이어진처음생각 || '-'} | ${r.변화 || '-'} | ${r.다시놓은기록 || '-'} | ${r.공감} | ${r.묶음 || '-'} |`);
+  for (const r of rows) L.push(`| ${r.번호} | ${r.이름} | ${r.단계}${r.처음답작성시점?' ('+r.처음답작성시점+')':''}${r.비교주의?' ['+r.비교주의+']':''} | ${r.쪽} | ${r.세기} | ${r.근거.replace(/\|/g, '/')}${r.처음근거 ? ` (처음: ${r.처음근거.replace(/\|/g, '/')})` : ''} | ${r.이어진처음생각 || '-'} | ${r.변화 || '-'} | ${r.다시놓은기록 || '-'} | ${r.공감} | ${r.묶음 || '-'} |`);
   return L.join('\n');
 }
 async function exportPNG() {
@@ -1656,7 +1674,7 @@ function validateBackup(raw) {
  for(const b of r.boards){obj(b,['id','code','question','left','right','cards','groups','whatif','whatifArchive','showNames','showCount','share','fs','created','deletedAt']);if(b.deletedAt!==undefined)date(b.deletedAt);id(b.id);if(bids.has(b.id))fail('중복 질문판');bids.add(b.id);if(b.code!==r.code)fail('코드 불일치');str(b.question,80);str(b.left,24);str(b.right,24);if(!b.question.trim()||!b.left.trim()||!b.right.trim())fail('빈 질문');date(b.created);bool(b.showNames);bool(b.showCount);bool(b.share);num(b.fs,.7,1.8);arr(b.whatif,500);arr(b.whatifArchive,500);[...b.whatif,...b.whatifArchive].forEach(w=>str(w,60));const maxStage=b.whatif.length+b.whatifArchive.length;
  if(!b.groups||typeof b.groups!=='object'||Array.isArray(b.groups)||Object.getPrototypeOf(b.groups)!==Object.prototype)fail('묶음');if(Object.keys(b.groups).length>5000)fail('묶음 크기');for(const [gid,g]of Object.entries(b.groups)){id(gid);obj(g,['label','color']);str(g.label,16);if(typeof g.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(g.color))fail('묶음 색');}
  arr(b.cards,20000);total+=b.cards.length;if(total>30000)fail('전체 카드 수');const localIds=new Set(b.cards.map(c=>c.id));
- for(const c of b.cards){obj(c,['id','boardId','sid','name','text','side','strength','rev','phase','stage','from','likes','hidden','history','x','y','group']);id(c.id);id(c.sid);if(c.boardId!==b.id||cardIds.has(c.id))fail('카드 식별자 중복/질문판');cardIds.add(c.id);str(c.name,12);str(c.text,60);if(!['L','R'].includes(c.side))fail('쪽');integer(c.strength,1,5);integer(c.rev,0,Number.MAX_SAFE_INTEGER-1000);integer(c.stage,0,maxStage);if(c.phase!==undefined)integer(c.phase,0,maxStage);bool(c.hidden);if(c.from!==null&&c.from!==undefined){id(c.from);if(!localIds.has(c.from)||c.from===c.id)fail('이전 카드 참조');const p=b.cards.find(p=>p.id===c.from);if(p.sid!==c.sid||p.stage!==0||c.stage===0)fail('처음 생각 연결');}
+ for(const c of b.cards){obj(c,['id','boardId','sid','name','text','side','strength','rev','phase','stage','from','likes','hidden','history','x','y','group','lateInitial']);if(c.lateInitial!==undefined){bool(c.lateInitial);if(c.lateInitial&&c.stage!==0)fail('처음 답 표시');}id(c.id);id(c.sid);if(c.boardId!==b.id||cardIds.has(c.id))fail('카드 식별자 중복/질문판');cardIds.add(c.id);str(c.name,12);str(c.text,60);if(!['L','R'].includes(c.side))fail('쪽');integer(c.strength,1,5);integer(c.rev,0,Number.MAX_SAFE_INTEGER-1000);integer(c.stage,0,maxStage);if(c.phase!==undefined)integer(c.phase,0,maxStage);bool(c.hidden);if(c.from!==null&&c.from!==undefined){id(c.from);if(!localIds.has(c.from)||c.from===c.id)fail('이전 카드 참조');const p=b.cards.find(p=>p.id===c.from);if(p.sid!==c.sid||p.stage!==0||c.stage===0)fail('처음 생각 연결');}
  if(c.group!==undefined){id(c.group);if(!Object.hasOwn(b.groups,c.group))fail('묶음 참조');}if(c.x!==undefined)num(c.x,0,100);if(c.y!==undefined)num(c.y,0,100);
  arr(c.likes,5000);const likes=new Set();c.likes.forEach(s=>{id(s);if(likes.has(s))fail('공감 중복');likes.add(s);});arr(c.history,5000);if(!c.history.length)fail('빈 이력');let prev=-1;for(const h of c.history){obj(h,['side','strength','text','phase','stage','t']);if(!['L','R'].includes(h.side))fail('이력 쪽');integer(h.strength,1,5);str(h.text,60);if(h.phase!==undefined)integer(h.phase,0,maxStage);if(h.stage!==undefined)integer(h.stage,0,maxStage);date(h.t);if(h.t<prev)fail('이력 날짜 순서');prev=h.t;}const last=c.history.at(-1);if(last.side!==c.side||last.strength!==c.strength||last.text!==c.text)fail('현재 카드와 이력 불일치');}
  }
@@ -1700,19 +1718,24 @@ function joinGame(code, name) {
   $('#j-msg').textContent = '선생님 화면을 찾는 중…'; $('#j-go').disabled = true;
   leaveChannels();
   const joinId = S.joinId = uid(); let found = false, tries = 0;
-  const hello = S.hello = () => toTeacher('hello', { sid: S.me.sid, boardId:S.cfg?.boardId, protocol:4 });
+  const hello = S.hello = () => toTeacher('hello', { sid: S.me.sid, boardId:S.cfg?.boardId, name:S.me.name, protocol:4 });
   const onCfg = p => {
     if(p.contentV4)p={...p,...p.contentV4};
     if(S.joinId!==joinId||!safeId(p.boardId)||!safeId(p.roomId)||!Number.isSafeInteger(p.configSeq)||p.configSeq<0||typeof p.question!=='string'||typeof p.left!=='string'||typeof p.right!=='string'||!Number.isInteger(p.stage)||p.stage<0)return;
     if(S.cfg&&S.cfg.roomId!==p.roomId)return;
     const prior=S.cfg||LS.get('tow:cfg:'+code);
     if(prior?.roomId===p.roomId && (p.configSeq < prior.configSeq || (p.configSeq===prior.configSeq && prior.boardId!==p.boardId)))return;
-    const changed=S.cfg?.boardId!==p.boardId, stageChanged=!!S.cfg && S.cfg.stage!==p.stage;
+    const changed=S.cfg?.boardId!==p.boardId,oldStage=curStage();
+    const nextStage=effectiveStage(p,S.me.cards,p.personalCards);
+    const stageChanged=!!S.cfg&&oldStage!==nextStage;
     if((changed||stageChanged)&&S.cfg)saveDraft();
     if(S.me.roomId&&S.me.roomId!==p.roomId){S.me={sid:uid(),name,cards:[],likes:[],drafts:{},roomId:p.roomId};saveMe();joinGame(code,name);return;}
     S.me.roomId=p.roomId;S.me.drafts ||= {};S.me.cards.forEach(c=>{if(!c.boardId)c.boardId=p.legacyBoardId;});saveMe();
+    if(Array.isArray(p.personalCards))syncPersonal(p.personalCards,p.boardId,p);
     found=true;S.cfg=p;LS.set('tow:cfg:'+code,p);
     if($('#student-view').classList.contains('hide'))enterStudent();else {if(changed)restoreDraft();else if(stageChanged){restoreDraft();}renderStudent();}
+    if(stageChanged&&!changed&&oldStage===0&&curStage()>0)$('#s-send-status').textContent='처음 답이 도착했어요. 이제 추가 질문 '+curStage()+'에 답해 주세요.';
+    if(changed)hello();
     resendStalled(true); // 선생님 화면이 살아 있다는 신호이므로, 실패로 멈춘 카드도 되살려 보낸다(카드별 3회까지)
   };
 
@@ -1751,7 +1774,7 @@ function draftSignature(d){return JSON.stringify([d.text,d.side,d.strength,d.edi
 function submissionKey(boardId,id){return boardId+':'+id;}
 function submissionFor(id,boardId=S.cfg?.boardId){return S.me?.submissions?.[submissionKey(boardId,id)];}
 function currentCard(){return stageCard(myBoardCards(),curStage());}
-function studentStageOpen(){return curStage()>0||!(S.cfg?.initialLocked||myBoardCards().some(c=>stOf(c)>0));}
+function studentStageOpen(){return !!S.cfg&&(!(S.cfg.initialLocked&&!S.cfg.stage))&&(curStage()>0||!S.cfg.initialLocked||!myBoardCards().some(c=>stOf(c)===0&&(c.ok||c.accepted)));}
 function activeSubmission(){return submissionFor(S.editing||S.target||currentCard()?.id);}
 function saveDraft(){if(!S.me||!S.cfg||S.restoring)return;S.me.drafts ||= {};const d={...composerDraft(),target:S.target};S.me.drafts[S.cfg.boardId]=d;S.me.stageDrafts ||= {};S.me.stageDrafts[submissionKey(S.cfg.boardId,curStage())]=d;saveMe();}
 function restoreDraft(){
@@ -1785,7 +1808,14 @@ function renderComposerStatus(){
   $('#s-sideL').setAttribute('aria-pressed',String(S.side==='L'));$('#s-sideR').setAttribute('aria-pressed',String(S.side==='R'));
   $('#s-str').setAttribute('aria-valuetext','세기 '+$('#s-str').value);
 }
-function curStage() { return S.cfg?.stage || 0; }
+// Global teacher stage is not necessarily this student's answer target.
+function effectiveStage(cfg,cards,personal){const own=(cards||[]).filter(c=>c.boardId===cfg?.boardId&&!c.rejected),authoritative=Array.isArray(personal)?personal:null;
+ const accepted=[...own.filter(c=>c.ok||c.accepted),...(authoritative||[])];
+ if(!initialCard(accepted)&&!accepted.some(c=>stOf(c)>0))return 0;
+ return cfg?.stage||0;
+}
+function curStage() { return effectiveStage(S.cfg,S.me?.cards); }
+function syncPersonal(cards,boardId,cfg=S.cfg){for(const a of cards){if(!safeId(a.id)||a.boardId!==boardId||!Number.isSafeInteger(a.rev)||!Number.isInteger(a.stage)||typeof a.text!=='string')continue;let c=S.me.cards.find(c=>c.id===a.id&&c.boardId===boardId);if(c&&c.rev>a.rev){const frozenInitial=a.stage===0&&cfg?.initialLocked&&!c.ok&&(!c.accepted||c.accepted.rev<=a.rev);if(!frozenInitial)continue;S.me.submissions ||= {};const key=submissionKey(boardId,a.id),m=S.me.submissions[key]||{id:a.id,boardId};m.rejectedDraft={text:c.text,side:c.side,strength:c.strength,stage:stOf(c),from:c.from,rev:c.rev};m.code='closed';m.message='처음 답은 이미 도착했어요. 수락되지 않은 수정 초안은 보관했어요.';S.me.submissions[key]=m;}if(!c){c={};S.me.cards.push(c);}Object.assign(c,a,{ok:true,rejected:false,accepted:{text:a.text,side:a.side,strength:a.strength,rev:a.rev,from:a.from}});delete S.pending[submissionKey(boardId,a.id)];const m=submissionFor(a.id,boardId);if(m)m.state='arrived';}saveMe();}
 function formTitle() { return !studentStageOpen()?'응답 잠시 멈춤':curStage()?'추가 질문 '+curStage()+(currentCard()?'의 내 생각 수정':'에 답하기'):currentCard()?'처음 질문의 내 생각 수정':'처음 질문에 답하기'; }
 function renderStudent() {
   const c = S.cfg; if (!c) return;
@@ -1793,11 +1823,11 @@ function renderStudent() {
   if (S.from && !curStage()) resetForm();
   $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
   const open=studentStageOpen();
-  $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&!c.whatif,!open?'기록 보관':'');
+  $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&curStage()===0,!open?'기록 보관':'');
   $('#s-q').classList.toggle('long', (c.question || '').length > 30); $('#student-view').classList.toggle('has-wf', !!c.whatif);
   $('#s-wf').classList.toggle('hide', !c.whatif&&open);
-  $('#s-wf').innerHTML=c.whatif?extraQuestionHTML(c.whatif,curStage(),true):'<span class="qh-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
-  { const e=$('#s-q-echo'), k=JSON.stringify([c.question,c.whatif,c.stage,open]); if(e.dataset.k!==k){e.dataset.k=k;e.classList.toggle('wf',!!c.whatif);e.innerHTML=studentQuestionEcho(c,open);} }
+  $('#s-wf').innerHTML=c.whatif?extraQuestionHTML(c.whatif,c.stage,open&&curStage()>0,curStage()===0?'선생님이 제시한 추가 질문':''):'<span class="qh-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
+  { const e=$('#s-q-echo'), k=JSON.stringify([c.question,c.whatif,c.stage,open])+':'+curStage(); if(e.dataset.k!==k){e.dataset.k=k;e.classList.toggle('wf',!!c.whatif);e.innerHTML=studentQuestionEcho(c,open,curStage());} }
   $('#s-rope-left').textContent=c.left; $('#s-rope-right').textContent=c.right;
   $('#s-sideL').textContent = '◀ ' + c.left; $('#s-sideR').textContent = c.right + ' ▶';
   $('#s-form-title').textContent = formTitle();
@@ -1806,14 +1836,15 @@ function renderStudent() {
 function sideLabel(s) { return s === 'L' ? S.cfg?.left : S.cfg?.right; }
 function mineItem(c, extra) {
   const li = document.createElement('li'); li.className = c.side;
-  li.innerHTML = `${esc(c.text)}<div class="m"><span>${esc(sideLabel(c.side) || '')} 쪽 · 세기 ${c.strength} · ${c.ok ? '<span class="okmark">✓ 도착</span>' : '<span class="waitmark">'+(c.rejected?'미수락 · 쓰던 글 보관':S.pending[submissionKey(c.boardId,c.id)]?'보내는 중…':'미도착 · 이번 생각 수정으로 재전송')+'</span>'}</span><span class="acts"></span></div>` + (extra || '');
+  li.innerHTML = `${esc(c.text)}${c.lateInitial?'<div class="note">추가 질문 제시 후 작성 · 추가 질문 제시 뒤 교사 화면에 도착한 첫 답 기준이며 실제 작성 시각을 측정한 것은 아니에요.</div>':''}<div class="m"><span>${esc(sideLabel(c.side) || '')} 쪽 · 세기 ${c.strength} · ${c.ok ? '<span class="okmark">✓ 도착</span>' : '<span class="waitmark">'+(c.rejected?'미수락 · 쓰던 글 보관':S.pending[submissionKey(c.boardId,c.id)]?'보내는 중…':'미도착 · 이번 생각 수정으로 재전송')+'</span>'}</span><span class="acts"></span></div>` + (extra || '');
   return li;
 }
 function renderMine() {
   const box = $('#s-mine'); box.innerHTML = '';
   $('#s-mine-empty').classList.toggle('hide', myBoardCards().length > 0);
   const st = curStage();
-  if(st&&!initialCard(myBoardCards())){const n=document.createElement('p');n.className='note';n.textContent='현재 만약에 질문에 바로 답할 수 있어요. 처음 생각 기록이 없어 처음과의 변화는 비교하지 않아요.';box.appendChild(n);}
+  if(initialCard(myBoardCards())?.lateInitial){const n=document.createElement('p');n.className='note';n.textContent='비교 주의: 처음 답은 추가 질문 제시 후 작성한 기록이에요.';box.appendChild(n);}
+  if(st&&!initialCard(myBoardCards())){const n=document.createElement('p');n.className='note';n.textContent='이전 기록: 처음 답 없음. 현재 추가 질문에 답할 수 있지만 처음 생각을 뒤늦게 만들지 않아요.';box.appendChild(n);}
   const legacy=myBoardCards().some((c,i,a)=>a.findIndex(x=>stOf(x)===stOf(c))!==i);
   if(legacy){const n=document.createElement('p');n.className='note';n.textContent='이전 버전의 여러 카드는 모두 보관돼요. 단계별 마지막 카드만 수정할 수 있고, 처음 생각의 마지막 카드를 비교 기준으로 써요.';box.appendChild(n);}
   const first = myBoardCards().filter(c => stOf(c) === 0), now = st ? myBoardCards().filter(c => stOf(c) === st) : [];
@@ -1944,6 +1975,7 @@ function sendCard(c) {
 }
 function rejectCard(p){
  const c=S.me?.cards.find(c=>c.id===p.id&&c.boardId===p.boardId&&c.rev===p.rev);if(!c)return;
+ const oldStage=curStage();
  const key=submissionKey(c.boardId,c.id),meta=submissionFor(c.id,c.boardId);delete S.pending[key];
  if(meta){meta.state='rejected';meta.code=p.code;meta.message=p.message;meta.rejectedDraft={text:c.text,side:c.side,strength:c.strength,stage:stOf(c),from:c.from};}
  if(S.cfg?.boardId===c.boardId&&curStage()===stOf(c))saveDraft();
@@ -1952,13 +1984,17 @@ function rejectCard(p){
  c.ok=false;c.rejected=true;
  const a=p.acceptedCard;if(['duplicate','revision','closed'].includes(p.code)&&a&&safeId(a.id)&&a.boardId===c.boardId&&a.stage===stOf(c)&&typeof a.text==='string'&&['L','R'].includes(a.side)&&Number.isInteger(a.strength)&&a.strength>=1&&a.strength<=5&&Number.isSafeInteger(a.rev)){const existing=S.me.cards.find(x=>x.id===a.id&&x.boardId===a.boardId),accepted={text:a.text,side:a.side,strength:a.strength,rev:a.rev,from:a.from};if(existing){Object.assign(existing,a,{ok:true,rejected:false,accepted});const m=submissionFor(a.id,a.boardId);if(m){m.state='conflict';m.rev=a.rev;m.signature=null;m.snapshot=null;}}else S.me.cards.push({...a,ok:true,accepted});}
  if(S.cfg?.boardId===c.boardId&&curStage()===stOf(c)){S.editing=null;S.target=currentCard()?.id||null;saveDraft();}
+ if(S.cfg?.boardId===c.boardId&&oldStage!==curStage()){restoreDraft();renderStudent();}
  saveMe();renderMine();renderComposerStatus();toast(p.message||'이 응답은 받지 못했어요.',6000);
 }
 function acknowledgeCard(p){
   const c=S.me?.cards.find(x=>x.id===p.id&&x.boardId===p.boardId);
   if(!c||(p.rev??0)!==c.rev||submissionFor(c.id,c.boardId)?.state==='rejected')return;
+  const oldStage=curStage(),wasBoard=S.cfg?.boardId===c.boardId;
   const key=submissionKey(c.boardId,c.id),meta=submissionFor(c.id,c.boardId);
-  c.ok=true;c.accepted={text:c.text,side:c.side,strength:c.strength,rev:c.rev,from:c.from};delete S.pending[key];if(meta)meta.state='arrived';
+  if(wasBoard&&oldStage===0&&stOf(c)===0)saveDraft();
+  c.lateInitial=c.lateInitial===true||p.lateInitial===true;c.ok=true;c.accepted={text:c.text,side:c.side,strength:c.strength,rev:c.rev,from:c.from};delete S.pending[key];if(meta)meta.state='arrived';
+  if(wasBoard&&oldStage!==curStage()){restoreDraft();saveMe();renderStudent();$('#s-send-status').textContent='처음 답이 도착했어요. 이제 추가 질문 '+curStage()+'에 답해 주세요.';return;}
   // Clear only this exact draft on this exact board. Never overwrite newer typing or another board.
   const active=S.cfg?.boardId===c.boardId&&stOf(c)===curStage();
   const draft=active?composerDraft():null;
@@ -2083,7 +2119,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pageshow', e => { if (e.persisted) onPageReturn(); }); // 첫 로드의 pageshow는 복귀가 아니다
 window.addEventListener('online', onPageReturn);
-window.TugData={questionHeadingHTML,extraQuestionHTML,studentQuestionEcho,stageCard,initialCard,previousCard,initialLocked,boardInputStage,cardRejection,migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
+window.TugData={participantRows,effectiveStage,questionHeadingHTML,extraQuestionHTML,studentQuestionEcho,stageCard,initialCard,previousCard,initialLocked,boardInputStage,cardRejection,migrateGame,validateBackup,backupObject,routeBoard,acceptCard,movement,boardNew,ROOM_VERSION,keptBoards,trashReason,trashQuestion,restoreQuestion,
   // 폰 교사 화면·연결 안정화 시험용 순수 함수
   isPhoneBoard,isPhoneLandscape,phoneBoardModel,WF_GONE,whatifList,latestStage,whatifCardCount,editWhatif,canDeleteWhatif,deleteWhatif,validStage,phoneRowView,phoneBoardHTML,codeClashLoser,autoResendPlan,MAX_AUTO_REVIVES,RETURN_JITTER_MS,RETURN_GAP_MS};
 
