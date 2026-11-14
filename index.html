@@ -1387,6 +1387,7 @@ function renderBoard() {
       yPx += el.offsetHeight + 10;
     }
   }
+  settleBoardOverlaps(board, vis, ls, topLim, botLim, H);
   drawLinks(board, pairs);
   updateSelbar();
 }
@@ -1551,6 +1552,69 @@ $('#phone-board').addEventListener('click', e => {
   if (T.sel.has(id)) T.sel.delete(id); else T.sel.add(id);
   renderBoard();
 });
+// 실제 카드 폭·높이로 가로로 겹치는 카드들을 찾고, 작성 순서대로 세로만 비켜 놓는다.
+// 수동 좌표·근거·세기·저장 형식은 그대로. 묶음은 한 덩어리로 움직인다.
+// 한 가로 영역에 공간이 모자라면 그 영역은 기존 접어 쌓기 배치를 유지한다.
+function avoidCardOverlaps(rects, minY, maxY, dir, gap = 8) {
+  const units = [], byGroup = new Map(), out = new Map(rects.map(r => [r.id, r.top]));
+  for (const r of rects) {
+    let u = r.group && byGroup.get(r.group);
+    if (!u) { u = { members: [], left: r.left, right: r.right, top: r.top, bottom: r.top + r.height }; units.push(u); if (r.group) byGroup.set(r.group, u); }
+    u.members.push(r); u.left = Math.min(u.left, r.left); u.right = Math.max(u.right, r.right); u.top = Math.min(u.top, r.top); u.bottom = Math.max(u.bottom, r.top + r.height);
+  }
+  out.blocked = new Set();
+  const across = (a, b) => a.left < b.right && b.left < a.right;
+  const seen = new Set();
+  for (const first of units) {
+    if (seen.has(first)) continue;
+    const component = [first]; seen.add(first);
+    for (let i = 0; i < component.length; i++) for (const u of units) if (!seen.has(u) && across(component[i], u)) { seen.add(u); component.push(u); }
+    // component 탐색 순서가 아니라 원래 카드 도착 순서가 우선이다.
+    const members = new Set(component), ordered = units.filter(u => members.has(u)), placed = [];
+    // 처음/만약에 줄을 가로질러 묶은 덩어리는 기존 수동 배치를 보존한다.
+    if (ordered.some(u => u.members.some(r => r.fixed))) continue;
+    let fits = true;
+    for (const u of ordered) {
+      const height = u.bottom - u.top; let y = Math.max(minY, Math.min(maxY - height, u.top));
+      // 앞 카드가 다른 카드 때문에 먼저 이동했더라도, 원래 겹쳤던 뒤 카드는 그 아래(위)를 따른다.
+      const originalHits = placed.filter(p => across(u, p) && u.top < p.bottom + gap && u.bottom + gap > p.top);
+      if (originalHits.length) y = dir > 0 ? Math.max(y, ...originalHits.map(p => p.y + p.height + gap)) : Math.min(y, ...originalHits.map(p => p.y - height - gap));
+      for (let n = 0; n <= ordered.length; n++) {
+        const hits = placed.filter(p => across(u, p) && y < p.y + p.height + gap && y + height + gap > p.y);
+        if (!hits.length) break;
+        y = dir > 0 ? Math.max(...hits.map(p => p.y + p.height + gap)) : Math.min(...hits.map(p => p.y - height - gap));
+      }
+      if (y < minY || y + height > maxY) { fits = false; break; }
+      placed.push({ ...u, y, height });
+    }
+    if (fits) { for (const p of placed) for (const r of p.members) out.set(r.id, r.top + p.y - p.top); }
+    else { for (const u of ordered) for (const r of u.members) out.blocked.add(r.id); }
+  }
+  return out;
+}
+function settleBoardOverlaps(board, vis, ls, topLim, botLim, H) {
+  const br = board.getBoundingClientRect(), lanes = [[], []], elements = new Map();
+  for (const c of vis) {
+    const el = board.querySelector('.card[data-id="'+c.id+'"]'); if (!el) continue;
+    const r = el.getBoundingClientRect(), top = r.top - br.top;
+    const lane = ls ? (stageOf(c) > 0 ? 1 : 0) : (top + r.height / 2 >= H / 2 ? 1 : 0);
+    lanes[lane].push({ id: c.id, group: c.group || null, left: r.left - br.left, right: r.right - br.left, top, height: r.height }); elements.set(c.id, el);
+  }
+  const groupLanes = new Map();
+  lanes.forEach((rows, i) => rows.forEach(r => { if (r.group) groupLanes.set(r.group, (groupLanes.get(r.group) || 0) | (1 << i)); }));
+  for (const rows of lanes) for (const r of rows) if (r.group && groupLanes.get(r.group) === 3) r.fixed = true;
+  for (let lane = 0; lane < 2; lane++) {
+    const solve = () => avoidCardOverlaps(lanes[lane], lane ? H / 2 + 14 : topLim, lane ? botLim : H / 2 - 14, lane ? 1 : -1);
+    let result = solve();
+    if (result.blocked.size) {
+      // 긴 근거 때문에 넘친 영역만 기존 두 줄 카드 모양으로 바꾸고 다시 잰다.
+      for (const id of result.blocked) elements.get(id).classList.add('stk');
+      for (const r of lanes[lane]) r.height = elements.get(r.id).getBoundingClientRect().height;
+      result = solve();
+    }
+    for (const r of lanes[lane]) { const y = result.get(r.id); if (y !== r.top) elements.get(r.id).style.top = (y / H * 100) + '%'; }
+  }
+}
 function drawLinks(board, pairs) {
   const svg = $('#links'); svg.innerHTML = ''; if (!pairs.length) {drawHistoryGhosts(board,svg);return;}
   const br = board.getBoundingClientRect(); const seen = new Set();
