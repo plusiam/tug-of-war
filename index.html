@@ -52,6 +52,55 @@ h2{font-size:20px;margin:0 0 12px}
 .tools button.on{background:var(--ink);color:#fff}
 .whatif-bar{display:none;padding:8px 16px;background:#fff8db;border-bottom:1px solid #f0dc8c;font-weight:700;font-size:calc(18px * var(--fs,1))}
 .whatif-bar.show{display:block}
+#board-view.phone #t-mask,#board-view.phone #t-big{display:none}
+#bigq{position:fixed;inset:0;z-index:150;background:#fff;display:flex;flex-direction:column;padding:4vh 5vw 3vh}
+.bq-main{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:4vh;text-align:center}
+.bq-q{font-size:clamp(36px,5.6vw,120px);font-weight:800;line-height:1.25;word-break:keep-all;overflow-wrap:anywhere}
+.bq-wf{font-size:clamp(26px,3.6vw,80px);font-weight:700;line-height:1.3;background:#fffaf0;border:2px solid #e3d8ac;border-radius:24px;padding:3vh 3vw;word-break:keep-all;overflow-wrap:anywhere}
+.bq-wf span{display:block;font-size:.55em;color:#685b39;margin-bottom:.3em}
+.bq-ends{display:flex;justify-content:space-between;gap:4vw;font-size:clamp(24px,3vw,64px);font-weight:800}
+.bq-ends .L{color:var(--L)}.bq-ends .R{color:var(--R)}
+.bq-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;font-size:clamp(16px,1.3vw,28px);color:var(--sub)}
+.bq-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#bigq{--u:calc(100vw / 1920)}
+#bigq.side{padding:0;background:#f6f7fb}
+.bq-topline{display:flex;justify-content:flex-end}
+.bq-tabs,.bq-pick{display:inline-flex;gap:calc(8*var(--u));flex-wrap:wrap;justify-content:flex-end}
+.bq-tabs button,.bq-pick button{font-size:max(14px,calc(20*var(--u)));font-weight:700;padding:calc(8*var(--u)) calc(16*var(--u));border-radius:calc(12*var(--u));min-height:0;white-space:nowrap}
+.bq-tabs button.on,.bq-pick button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.bq-top{background:#fff;border-bottom:1px solid var(--line);padding:calc(18*var(--u)) calc(36*var(--u)) calc(14*var(--u));display:flex;gap:calc(24*var(--u));align-items:flex-end}
+.bq-qs{flex:1;min-width:0}
+.bq-ql{font-size:max(13px,calc(18*var(--u)));font-weight:700;color:var(--sub)}
+.bq-q2{font-size:calc(46*var(--u));font-weight:800;line-height:1.25;word-break:keep-all}
+.bq-wf2{margin:calc(8*var(--u)) 0 0 calc(22*var(--u));padding:calc(6*var(--u)) calc(16*var(--u));border-left:calc(5*var(--u)) solid #b5a674;background:#fffaf0;border-radius:calc(10*var(--u));font-size:calc(32*var(--u));font-weight:800;line-height:1.3;word-break:keep-all}
+.bq-wf2 small{display:block;font-size:max(12px,calc(17*var(--u)));font-weight:700;color:#685b39}
+.bq-ctl{display:flex;flex-direction:column;align-items:flex-end;gap:calc(8*var(--u));max-width:40%}
+.bq-strip{flex-shrink:0;height:calc(34*var(--u));background:linear-gradient(90deg,#e8f0ff 50%,#ffece8 50%);position:relative;border-bottom:1px solid var(--line)}
+.bq-strip i{position:absolute;left:2%;right:2%;top:50%;height:calc(8*var(--u));margin-top:calc(-4*var(--u));border-radius:calc(4*var(--u));background:repeating-linear-gradient(115deg,#b98b5a 0 8px,#94683b 8px 16px)}
+.bq-strip b{position:absolute;left:50%;top:calc(4*var(--u));bottom:calc(4*var(--u));width:calc(5*var(--u));margin-left:calc(-2.5*var(--u));background:#e0b100;border-radius:2px}
+.bq-cols{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr}
+.bq-col{padding:calc(14*var(--u)) calc(30*var(--u)) 0;min-width:0;overflow-y:auto}
+.bq-col.L{background:#e8f0ff}.bq-col.R{background:#ffece8}
+.bq-end{font-size:calc(34*var(--u));font-weight:900;margin-bottom:calc(8*var(--u));display:flex;justify-content:space-between;align-items:baseline;gap:calc(12*var(--u));color:var(--L)}
+.bq-col.R .bq-end{color:var(--R)}
+.bq-end small{font-size:max(12px,calc(18*var(--u)));font-weight:700;color:var(--sub);white-space:nowrap}
+.bq-r{display:flex;gap:calc(14*var(--u));align-items:baseline;width:100%;text-align:left;background:#fff;color:var(--ink);border:0;border-left:calc(8*var(--u)) solid var(--L);border-radius:calc(12*var(--u));padding:calc(9*var(--u)) calc(16*var(--u));margin:0 0 calc(8*var(--u));min-height:0;font:inherit;cursor:pointer}
+.bq-col.R .bq-r{border-left-color:var(--R)}
+.bq-t{flex:1;min-width:0;font-size:calc(32*var(--u));font-weight:600;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}
+.bq-who{font-size:max(12px,calc(18*var(--u)));font-weight:700;color:var(--sub);white-space:nowrap}
+.bq-dots{font-size:calc(22*var(--u));letter-spacing:calc(-1*var(--u));color:#b6bcc8;white-space:nowrap}
+.bq-dots i{font-style:normal;color:var(--L)}.bq-col.R .bq-dots i,.bq-one.R .bq-dots i{color:var(--R)}
+.bq-none{font-size:calc(26*var(--u));font-weight:700;color:var(--sub);line-height:1.5;text-align:center;padding:calc(20*var(--u))}
+.bq-onewrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:calc(30*var(--u)) calc(120*var(--u));overflow:auto}
+.bq-one{width:100%;background:#fff;border-radius:calc(28*var(--u));border-left:calc(18*var(--u)) solid var(--L);padding:calc(40*var(--u)) calc(56*var(--u));box-shadow:0 4px 24px rgba(20,30,50,.12)}
+.bq-one.R{border-left-color:var(--R)}
+.bq-one-end{font-size:calc(34*var(--u));font-weight:900;color:var(--L);display:flex;gap:calc(18*var(--u));align-items:baseline;flex-wrap:wrap}
+.bq-one.R .bq-one-end{color:var(--R)}
+.bq-one-end .bq-dots{font-size:calc(30*var(--u))}
+.bq-one-t{font-size:calc(76*var(--u));font-weight:700;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere;margin-top:calc(18*var(--u))}
+#bigq.side .bq-foot{flex-shrink:0;background:#fff;border-top:1px solid var(--line);padding:calc(8*var(--u)) calc(36*var(--u));font-size:max(13px,calc(18*var(--u)))}
+/* 노트북 폭(641~1400px): 단추가 둘 늘어도 도구 줄이 한 줄에 들어가게 좌우 여백만 줄인다(휴대폰 분기 제외) */
+@media (min-width:641px) and (max-width:1400px){#board-view:not(.phone) .tools button{padding:6px 8px}}
 .whatif-bar small{font-weight:500;color:#8a6d00;margin-left:8px}
 /* 만약에 창의 「지금까지 띄운 질문」: 줄마다 카드 수·고치기·지우기 */
 .wf-list{list-style:none;padding:0;margin:6px 0 0}
@@ -428,6 +477,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
   <p class="note">· 학생은 근거 한 줄을 쓰고, 줄 위 내 카드를 끌어(또는 버튼으로) 쪽과 세기(1 살짝 ~ 5 아주 세게)를 정해 보내요.<br>· 세기 5는 그 끝에 가장 가깝게, 1은 가운데 가까이에 놓여요.<br>· 처음 생각은 줄 위쪽에, 「그런데 만약에?」 뒤의 만약에 생각은 줄 아래쪽에 놓여 두 생각을 한눈에 비교해요.</p>
 </section>
 
+<div id="bigq" class="hide" role="dialog" aria-label="질문 크게 보기"></div>
 <!-- 교사 공유 화면 -->
 <section id="board-view" class="hide">
   <div class="question-stack" aria-label="처음 질문과 추가 질문">
@@ -441,6 +491,8 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
       <button id="t-boards">질문판 목록</button><button id="t-newboard">새 질문판</button><button id="t-activate">이 질문 시작</button><button id="t-resume">수업 재개</button><button id="t-json">수업 저장(JSON)</button><button id="t-import">저장한 수업 불러오기</button><button id="t-names">이름 보이기</button>
       <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요)." aria-pressed="false">친구 근거: 꺼짐</button>
       <button id="t-whatif">그런데 만약에?</button>
+      <button id="t-mask" class="hide" title="켜 두면 큰 화면에 추가 질문 글과 만약에 생각이 보이지 않아요. 학생에게 가는 질문은 달라지지 않아요." aria-pressed="true">추가 질문 가리기: 켜짐</button>
+      <button id="t-big" title="질문이나 양쪽 근거를 화면 가득 크게 보여요. Esc 또는 「판으로」로 돌아와요.">크게 보기</button>
       <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
       <button id="t-export">내보내기</button>
       <button id="t-fontdown">가-</button><button id="t-fontup">가+</button>
@@ -611,7 +663,9 @@ function openChannel(topic, handlers, onStatus) {
   return ch;
 }
 function toast(msg, ms = 2200) { document.querySelectorAll('.toast').forEach(e => e.remove()); /* 새 알림이 뜨면 앞 알림은 지운다(같은 자리에 겹치지 않게) */ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
-function show(id) { for (const s of document.querySelectorAll('body > section')) s.classList.toggle('hide', s.id !== id); syncWake(); }
+function show(id) { for (const s of document.querySelectorAll('body > section')) s.classList.toggle('hide', s.id !== id);
+  if (id !== 'board-view') { T.big = null; const b = document.querySelector('#bigq'); if (b) { b.classList.add('hide'); b.innerHTML = ''; } }
+  syncWake(); }
 function studentUrl(code) { return location.origin + location.pathname + '?c=' + code; }
 function qrSvg(text) {
   const qr = qrcode(0, 'M'); qr.addData(text); qr.make();
@@ -631,7 +685,9 @@ const ROOM_VERSION = 4, APP_MARKER = 'thinking-tug-room';
 const T = { room: null, g: null, ch: null, sel: new Set(), connected: false, viewedBoardId: null,
   // 아래는 화면·연결 상태만(저장하지 않음): 구독 세대·시작 시각, 겹침 확인을 기다리는 코드, 화면 꺼짐 방지, 폰 목록 필터
   // codeAt: 이 화면에서 지금 코드를 받은 시각(겹침 판정용, 0이면 수업을 만든 시각을 쓴다)
-  subGen: 0, subAt: 0, probeCode: null, codeAt: 0, clashBusy: false, clashWarned: null, wake: null, phoneFilter: 'all' };
+  subGen: 0, subAt: 0, probeCode: null, codeAt: 0, clashBusy: false, clashWarned: null, wake: null, phoneFilter: 'all',
+  // maskOff: 「추가 질문 가리기」를 끈 질문판 id(없으면 가림). big: 「질문 크게 보기」 층 {boardId, stage}. 둘 다 저장·전송하지 않는다.
+  maskOff: null, big: null };
 const gameKey = code => 'tow:game:' + code;
 const roomKey = id => 'tow:room:' + id;
 function boardNew(question, left, right, code) { return { id: uid(), code, question, left, right, cards: [], groups: {}, whatif: [], whatifArchive: [], showNames: false, showCount: false, share: false, fs: 1, created: Date.now() }; }
@@ -715,7 +771,11 @@ function validStage(g, k) { const all = whatifList(g); return Number.isInteger(k
 function shownStage() { const g = T.g, v = T.view; return v && v.boardId === g.id && validStage(g, v.stage) ? v.stage : latestStage(g); }
 function setViewStage(k) { T.view = validStage(T.g, k) && k !== latestStage(T.g) ? { boardId: T.g.id, stage: k } : null; T.sel.clear(); renderBoard(); }
 // 판에 보이는 만약에 회차(고른 회차, 기본은 최신). 내보내기 요약은 보기와 상관없이 latestStage를 쓴다.
-function lastStage() { return shownStage(); }
+function lastStage() { return extraMasked() ? 0 : shownStage(); }
+/* 추가 질문 가리기(넓은 화면 전용): 교사 판을 전자칠판에 띄울 때 추가 질문 글과 만약에 생각이 미리 보이지 않게 한다.
+   진행 중인 질문판에 추가 질문이 있으면 기본으로 가린다. 화면 상태일 뿐이라 새로 고치면 다시 가려지고, 학생에게 가는 설정은 달라지지 않는다. */
+function extraMaskable() { const g = T.g, r = T.room; return !!g && !!r && !r.offline && T.viewedBoardId === r.activeBoardId && latestStage(g) > 0 && !isPhoneBoard(); }
+function extraMasked() { return extraMaskable() && T.maskOff !== T.g.id; }
 function inputStage() { return T.g.whatif.length ? allWhatifs().length : 0; }
 function onBoard(c) { const st = stageOf(c); return !c.hidden && (st === 0 || st === lastStage()); }
 // 만약에 단계에서 처음 생각과 자리·세기가 같은 카드는 작은 표시로(누르면 펼쳐짐)
@@ -1065,7 +1125,7 @@ function renderCounts() {
   $('#t-count').classList.toggle('on', !!g.showCount);
   $('#t-count').textContent = g.showCount ? '찬반 수 숨기기' : '찬반 수';
   bar.classList.toggle('show', !!g.showCount); if (!g.showCount) return;
-  const s0 = stageStats(0), cs = changeSummary();
+  const s0 = stageStats(0), cs = extraMasked() ? null : changeSummary();
   let h = `<span><span class="cl">처음 생각</span> <span class="cL">◀ ${esc(g.left)} ${s0.L}명</span> · <span class="cR">${esc(g.right)} ${s0.R}명 ▶</span></span>`;
   if (cs) {
     h += `<span><span class="cl">${lastStage() !== latestStage(g) ? `지난 만약에 생각(${lastStage()}번)` : '만약에 생각'}</span> <span class="cL">◀ ${cs.sk.L}명</span> · <span class="cR">${cs.sk.R}명 ▶</span> <span class="note">(참여 ${cs.sk.n}/${cs.all}명)</span></span>`;
@@ -1076,7 +1136,7 @@ function renderCounts() {
 // 넓은 판의 회차 고르기 줄(만약에 질문이 둘 이상일 때만 보인다). 폰에서는 요약 밧줄 안의 칩이 같은 일을 한다.
 function renderStageBar() {
   const g = T.g, bar = $('#b-stagebar'), m = phoneBoardModel(g, 'all', shownStage());
-  const show = m.stages.length >= 2; bar.classList.toggle('show', show);
+  const show = m.stages.length >= 2 && !extraMasked(); bar.classList.toggle('show', show);
   bar.innerHTML = !show ? '' : '<span class="cl">만약에 질문</span>' +
     m.stages.map(st => `<button type="button" data-st="${st.k}" class="${st.k === m.ls ? 'on' : ''}" aria-pressed="${st.k === m.ls}" title="${esc(st.text)}">${st.k}<small>${st.total}장</small></button>`).join('') +
     `<span class="st-q">${esc(whatifList(g)[m.ls - 1])}</span>` +
@@ -1094,6 +1154,76 @@ function studentQuestionEcho(c,open,target=c.stage||0) {
   if(c.whatif&&target===0)return '<span class="e-main"><small>'+(open?'지금 답할 질문 · 처음 질문':'응답 잠시 멈춤')+'</small>'+esc(c.question)+'</span><span class="e-q"><small>선생님이 제시한 추가 질문 · 추가 질문 '+c.stage+'</small>'+esc(c.whatif)+'</span>';
   return c.whatif ? first+'<span class="e-main"><small>지금 답할 질문 · 추가 질문 '+(c.stage||0)+'</small>'+esc(c.whatif)+'</span>' : open?'<span class="e-main"><small>지금 답할 질문 · 처음 질문</small>'+esc(c.question)+'</span>':first+'<span class="e-paused">응답 잠시 멈춤 · 다음 추가 질문을 기다려 주세요.</span>';
 }
+const BIG_PER_COL = 7; // 양쪽 근거: 한 쪽에 7줄씩, 한 화면 14개
+function bigDots(n) { return '<span class="bq-dots"><i>' + '●'.repeat(n) + '</i>' + '○'.repeat(5 - n) + '</span>'; }
+// 양쪽 근거에 올릴 카드: 교사 판과 같은 규칙(숨긴 카드 제외). 세게 당기는 근거부터(5→1), 같은 세기는 도착 순.
+function bigSideCards(g, stage, side) {
+  return g.cards.map((c, i) => [c, i]).filter(x => !x[0].hidden && stageOf(x[0]) === stage && x[0].side === side)
+    .sort((a, b) => b[0].strength - a[0].strength || a[1] - b[1]).map(x => x[0]);
+}
+// 층에서 고를 수 있는 생각: 가림 중에는 처음 생각만. 한 장 넘기기 순서는 왼쪽 → 오른쪽.
+function bigSideModel(g, B) {
+  const qs = extraMasked() ? [] : preparedQueue(g);
+  if (!qs.some(q => q.stage === B.sideStage)) B.sideStage = 0;
+  const st = B.sideStage, L = bigSideCards(g, st, 'L'), R = bigSideCards(g, st, 'R');
+  const pages = Math.max(1, Math.ceil(Math.max(L.length, R.length) / BIG_PER_COL));
+  B.page = Math.min(Math.max(0, B.page || 0), pages - 1);
+  const seq = L.concat(R), one = g.share && B.one ? seq.find(c => c.id === B.one) || null : null; if (!one) B.one = null;
+  return { qs, st, wf: st ? qs.find(q => q.stage === st) : null, L, R, pages, seq, one };
+}
+function renderBig() {
+  const el = $('#bigq'), g = T.g;
+  const open = !!T.big && !!g && T.big.boardId === g.id && !isPhoneBoard() && !$('#board-view').classList.contains('hide');
+  if (!open) { T.big = null; el.classList.add('hide'); el.innerHTML = ''; return; }
+  const B = T.big, live = !T.room.offline && T.viewedBoardId === T.room.activeBoardId;
+  const tabs = '<span class="bq-tabs" role="tablist">' + [['q', '질문'], ['side', '양쪽 근거']].map(t => '<button type="button" role="tab" data-bq="tab" data-tab="' + t[0] + '" class="' + (B.tab === t[0] ? 'on' : '') + '" aria-selected="' + (B.tab === t[0]) + '">' + t[1] + '</button>').join('') + '</span>';
+  const close = '<button type="button" class="primary" data-bq="close">판으로</button>';
+  el.classList.remove('hide'); el.classList.toggle('side', B.tab === 'side');
+  if (B.tab !== 'side') {
+    const qs = preparedQueue(g), k = B.stage, cur = qs.find(q => q.stage === k) || null, next = qs.find(q => q.stage > (cur ? k : 0));
+    if (!cur) B.stage = 0;
+    const st = cur ? k : 0;
+    const sent = new Set(g.cards.filter(c => stageOf(c) === st).map(c => c.sid || c.id)).size, joined = Math.max(participantRows(T.room, g).length, sent);
+    el.innerHTML = '<div class="bq-topline">' + tabs + '</div><div class="bq-main"><div class="bq-q">' + esc(g.question) + '</div>' +
+      (cur ? '<div class="bq-wf"><span>그런데 만약에?</span>' + esc(cur.text) + '</div>' : '') +
+      '<div class="bq-ends"><span class="L">◀ ' + esc(g.left) + '</span><span class="R">' + esc(g.right) + ' ▶</span></div></div>' +
+      '<div class="bq-foot"><span class="bq-info">' + (live ? '접속 코드 <b>' + esc(g.code) + '</b> · ' : '') + '입장 ' + joined + '명 중 ' + sent + '명 보냄</span><span class="bq-act">' +
+      (cur ? '<button type="button" data-bq="first">처음 질문만</button>' : '') + (next ? '<button type="button" data-bq="next">다음 추가 질문 보이기</button>' : '') + close + '</span></div>';
+    return;
+  }
+  const m = bigSideModel(g, B), st = m.st;
+  const pick = m.qs.length ? '<span class="bq-pick">' + [{ stage: 0 }].concat(m.qs).map(q => '<button type="button" data-bq="stage" data-st="' + q.stage + '" class="' + (q.stage === st ? 'on' : '') + '">' + (q.stage ? '추가 질문 ' + q.stage : '처음 생각') + '</button>').join('') + '</span>' : '';
+  const who = c => g.showNames && c.name ? '<span class="bq-who">' + esc(c.name) + '</span>' : '';
+  const top = '<div class="bq-top"><div class="bq-qs"><div class="bq-ql">처음 질문</div><div class="bq-q2">' + esc(g.question) + '</div>' +
+    (m.wf ? '<div class="bq-wf2"><small>추가 질문 ' + st + ' · 그런데 만약에?</small>' + esc(m.wf.text) + '</div>' : '') + '</div><div class="bq-ctl">' + tabs + pick + '</div></div>' +
+    '<div class="bq-strip" aria-hidden="true"><i></i><b></b></div>';
+  const label = st ? '추가 질문 ' + st + '의 생각' : '처음 생각';
+  let body, info, nav = '';
+  if (!g.share) {
+    // 「친구 근거: 꺼짐」이면 판과 같이 근거 글을 큰 화면에 올리지 않는다
+    body = '<div class="bq-onewrap"><div class="bq-none">「친구 근거」가 꺼져 있어 근거 글을 띄우지 않아요.<br>판에서 「친구 근거: 켜짐」으로 바꾸면 여기에 보여요.</div></div>';
+    info = label;
+  } else if (m.one) {
+    const c = m.one, i = m.seq.indexOf(c);
+    body = '<div class="bq-onewrap"><div class="bq-one ' + c.side + '"><div class="bq-one-end">' + (c.side === 'L' ? '◀ ' + esc(g.left) : esc(g.right) + ' ▶') + bigDots(c.strength) + who(c) + '</div><div class="bq-one-t">' + esc(c.text) + '</div></div></div>';
+    info = label + ' · 한 장 크게 · Esc 목록으로';
+    nav = '<button type="button" data-bq="oneprev"' + (i <= 0 ? ' disabled' : '') + ' aria-label="이전 근거">←</button><button type="button" data-bq="oneback">목록으로</button><button type="button" data-bq="onenext"' + (i >= m.seq.length - 1 ? ' disabled' : '') + ' aria-label="다음 근거">→</button>';
+  } else {
+    const row = c => '<button type="button" class="bq-r" data-bq="one" data-id="' + esc(c.id) + '">' + bigDots(c.strength) + '<span class="bq-t">' + esc(c.text) + '</span>' + who(c) + '</button>';
+    const col = (side, arr) => '<div class="bq-col ' + side + '"><div class="bq-end"><span>' + (side === 'L' ? '◀ ' + esc(g.left) : esc(g.right) + ' ▶') + '</span><small>세게 당기는 근거부터</small></div>' +
+      (arr.length ? arr.slice(B.page * BIG_PER_COL, (B.page + 1) * BIG_PER_COL).map(row).join('') : '<div class="bq-none">아직 근거가 없어요</div>') + '</div>';
+    body = '<div class="bq-cols">' + col('L', m.L) + col('R', m.R) + '</div>';
+    info = label + ' · 근거를 누르면 한 장만 크게 · Esc 판으로';
+    if (m.pages > 1) nav = '<button type="button" data-bq="pgprev"' + (B.page === 0 ? ' disabled' : '') + ' aria-label="앞쪽">←</button><span>' + (B.page + 1) + ' / ' + m.pages + ' 쪽</span><button type="button" data-bq="pgnext"' + (B.page >= m.pages - 1 ? ' disabled' : '') + ' aria-label="뒤쪽">→</button>';
+  }
+  el.innerHTML = top + body + '<div class="bq-foot"><span class="bq-info">' + info + '</span><span class="bq-act">' + nav + close + '</span></div>';
+}
+function bigStep(d) { // ← → : 한 장 보기에서는 이전/다음 근거, 목록에서는 쪽 넘김
+  const B = T.big; if (!B || B.tab !== 'side' || !T.g) return false;
+  if (B.one) { const m = bigSideModel(T.g, B), i = m.seq.findIndex(c => c.id === B.one), n = m.seq[i + d]; if (n) { B.one = n.id; B.page = Math.floor((n.side === 'L' ? m.L : m.R).indexOf(n) / BIG_PER_COL); } }
+  else B.page = (B.page || 0) + d;
+  return true;
+}
 function renderBoard() {
   const g = T.g; if (!g) return;
   const board = $('#board');
@@ -1108,8 +1238,12 @@ function renderBoard() {
   $('#t-share').classList.toggle('on', g.share);
   $('#t-share').textContent = g.share ? '친구 근거: 켜짐' : '친구 근거: 꺼짐';
   $('#t-share').setAttribute('aria-pressed', String(!!g.share));
-  $('#b-whatif').classList.toggle('show', !!wf||paused);
-  $('#b-whatif').innerHTML=wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
+  const masked = extraMasked(), mb = $('#t-mask');
+  mb.classList.toggle('hide', !extraMaskable()); mb.classList.toggle('on', masked);
+  mb.textContent = masked ? '추가 질문 가리기: 켜짐' : '추가 질문 가리기: 꺼짐'; mb.setAttribute('aria-pressed', String(masked));
+  renderBig();
+  $('#b-whatif').classList.toggle('show', masked||!!wf||paused);
+  $('#b-whatif').innerHTML=masked?'<span class="qh-meta"><span class="qh-label">추가 질문</span></span><span class="qh-paused">가려 두었어요 · 「추가 질문 가리기: 켜짐」을 누르면 추가 질문과 만약에 생각이 보여요.</span>':wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
   renderCounts(); renderStageBar();renderParticipants();
   const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
   // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
@@ -1474,13 +1608,14 @@ function askWhatif() {
   const g = T.g, all = allWhatifs();
   // 진행 중이 아닌 질문판에서 띄운 질문은 학생에게 가지 않는다(설정은 진행 중인 판 것만 보낸다). 보관(오프라인) 수업은 예전처럼 기록용으로 띄울 수 있다.
   const canAsk = T.room.offline || T.viewedBoardId === T.room.activeBoardId;
-  const gone = all.filter(w => w === WF_GONE).length;
+  const gone = all.filter(w => w === WF_GONE).length, masked = extraMasked();
   const prev = all.map((w, i) => { const k = i + 1; if (w === WF_GONE) return ''; const n = whatifCardCount(g, k);
+    if (masked) return `<li data-k="${k}"><span class="wf-q"><b>${k}.</b> (가려 둔 질문)</span><span class="wf-act"><span class="wf-n">${n ? `카드 ${n}장` : '카드 없음'}</span></span></li>`;
     return `<li data-k="${k}"><span class="wf-q"><b>${k}.</b> ${esc(w)}${whatifIsUp(g, k) ? ' <em>떠 있음</em>' : ''}</span><span class="wf-act"><span class="wf-n">${n ? `카드 ${n}장` : '카드 없음'}</span><button type="button" data-wf="edit">고치기</button>${canDeleteWhatif(g, k) ? '<button type="button" data-wf="del">지우기</button>' : ''}</span></li>`; }).join('');
   modal(`<h2>그런데 만약에?</h2><p class="note">추가 질문은 학생에게 <b>순서대로 하나씩</b> 공개돼요. 학생은 처음 질문에 답을 보낸 뒤에야 추가 질문 1을 보고, 그 답을 보낸 뒤 추가 질문 2를 봐요. 여러 개를 미리 띄워 두어도 학생마다 자기 속도로 한 번에 하나씩 받아요.<br>· 질문마다 「앞선 생각 그대로 보내기」 또는 「위치·근거 바꾸기」로 한 장씩 답해요. 답을 보내면 앞선 답은 읽기 전용으로 보관돼요.<br>· 처음 생각은 줄 위에 그대로(흐리게) 남고, 만약에 생각은 줄 아래에 놓여요. 비교 기준은 언제나 처음 생각이에요. 앞선 질문의 카드는 판의 「만약에 질문」 번호를 눌러 볼 수 있고, 내보내기에도 남아요.<br>· 이 교사 화면에는 띄운 질문이 모두 보여요. 학생에게 미리 보이고 싶지 않으면 화면을 함께 볼 때 주의해 주세요.<br>· 「질문 내리기」는 학생 입력을 잠시 멈춰요. 새 질문을 띄우면 학생은 자기 차례의 질문부터 이어 가요.</p>
     ${canAsk ? '' : '<p class="note wf-warn">지금 보는 질문판은 진행 중이 아니에요. 여기서 띄운 질문은 학생에게 가지 않아요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.</p>'}
     <input type="text" id="wf-in" maxlength="60" placeholder="예) 사자가 다시 커진다면?"${canAsk ? '' : ' disabled'}>
-    ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
+    ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">${masked ? '· 글을 가려 두었어요. 보거나 고치려면 먼저 「추가 질문 가리기」를 꺼 주세요' : '· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요'}</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
     <div class="actions">${T.g.whatif.length ? '<button data-a="off">질문 내리기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
     const inp = ov.querySelector('#wf-in'); if (canAsk) inp.focus();
     const reopen = () => { close(); askWhatif(); };
@@ -1561,6 +1696,7 @@ function exportText() {
 async function exportPNG() {
   if (!window.html2canvas) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
   T.sel.clear(); renderBoard();
+  if (extraMasked()) toast('추가 질문을 가린 화면 그대로 저장해요. 만약에 생각까지 담으려면 가리기를 끄고 다시 저장해 주세요.');
   const target = $('#board-view');
   const canvas = await html2canvas(target, { backgroundColor: '#ffffff', scale: 2, ignoreElements: el => el.classList?.contains('tools') || el.id === 'selbar' });
   canvas.toBlob(b => download(fileBase() + '.png', b));
@@ -1652,6 +1788,26 @@ $('#t-share').onclick = () => {
   toast(T.g.share ? '판에 근거 글이 보이고, 학생 화면에도 친구 근거(이름 없이)가 보여요' : '근거 글을 접었어요. 판에는 쪽·세기·쓴 사람만 보여요. 카드를 누르면 그 근거만 펼쳐져요');
 };
 $('#t-whatif').onclick = askWhatif;
+$('#t-mask').onclick = () => { if (!extraMaskable()) return; const on = extraMasked(); T.maskOff = on ? T.g.id : null; T.sel.clear(); renderBoard();
+  toast(on ? '추가 질문과 만약에 생각을 다시 보여요' : '추가 질문 글과 만약에 생각을 가렸어요. 학생에게 가는 질문은 그대로예요'); };
+$('#t-big').onclick = () => { if (!T.g || isPhoneBoard()) return; T.big = { boardId: T.g.id, tab: 'q', stage: 0, sideStage: 0, page: 0, one: null }; renderBoard(); };
+$('#bigq').addEventListener('click', e => { const b = e.target.closest('[data-bq]'); if (!b || !T.big || !T.g) return;
+  const B = T.big, a = b.dataset.bq;
+  if (a === 'close') T.big = null;
+  else if (a === 'tab') { B.tab = b.dataset.tab === 'side' ? 'side' : 'q'; B.one = null; }
+  else if (a === 'first') B.stage = 0;
+  else if (a === 'next') { const nx = preparedQueue(T.g).find(q => q.stage > B.stage); if (nx) B.stage = nx.stage; }
+  else if (a === 'stage') { B.sideStage = +b.dataset.st || 0; B.page = 0; B.one = null; }
+  else if (a === 'one') B.one = b.dataset.id;
+  else if (a === 'oneback') B.one = null;
+  else if (a === 'oneprev' || a === 'pgprev') bigStep(-1);
+  else if (a === 'onenext' || a === 'pgnext') bigStep(1);
+  renderBoard(); });
+// Esc: 한 장 보기 → 목록 → 판 순으로 돌아간다. ← →: 쪽 넘김. 글을 쓰는 중이거나 다른 창이 떠 있으면 건드리지 않는다.
+document.addEventListener('keydown', e => { if (!T.big || !T.g) return; if (document.querySelector('.overlay')) return;
+  const t = e.target; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '')) return;
+  if (e.key === 'Escape') { if (T.big.one) T.big.one = null; else T.big = null; renderBoard(); }
+  else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && bigStep(e.key === 'ArrowLeft' ? -1 : 1)) { e.preventDefault(); renderBoard(); } });
 $('#t-count').onclick = () => { T.g.showCount = !T.g.showCount; saveGame(); renderBoard(); };
 $('#t-export').onclick = exportMenu;
 $('#t-more').onclick = moreMenu;
