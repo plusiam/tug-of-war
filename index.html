@@ -812,7 +812,8 @@ function extraMasked() { return extraMaskable() && T.maskOff !== T.g.id; }
 function inputStage() { return boardInputStage(T.g); }
 function onBoard(c) { const st = stageOf(c); return !c.hidden && (st === 0 || st === lastStage()); }
 // 만약에 단계에서 처음 생각과 자리·세기가 같은 카드는 작은 표시로(누르면 펼쳐짐)
-const isMini = c => stageOf(c) > 0 && changeOf(c) === '그대로';
+// 접는 것은 처음 생각과 쪽·세기·근거 글이 모두 같은 카드뿐이다. 자리는 같아도 근거 글을 새로 썼다면 판에 글을 그대로 보인다.
+const isMini = c => { if (!(stageOf(c) > 0) || changeOf(c) !== '그대로') return false; const par = T.g.cards.find(x => x.id === c.from); return !!par && String(par.text || '').trim() === String(c.text || '').trim(); };
 function changeOf(c) { return changeIn(T.g, c); }
 function changeIn(g, c) {
   if (!stageOf(c)) return '';
