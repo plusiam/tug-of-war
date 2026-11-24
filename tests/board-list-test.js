@@ -34,7 +34,7 @@ const vm = require('vm');
   check('처음 순서는 만든 순서', order() === ids(b1, b2, b3));
   check('맨 위를 더 위로, 맨 아래를 더 아래로는 바뀌지 않는다', A.ctx.moveQuestion(room, b1.id, -1) === false && A.ctx.moveQuestion(room, b3.id, 1) === false && order() === ids(b1, b2, b3));
   check('없는 판은 바뀌지 않는다', A.ctx.moveQuestion(room, 'nope', 1) === false && order() === ids(b1, b2, b3));
-  await sleep(350); const n0 = cfgs(); // 카드 도착 뒤 늦게 나가는 판 공유 전송이 끝난 다음부터 센다
+  await sleep(1500); const n0 = cfgs(); // 카드 도착 뒤 늦게 나가는 판 공유 전송이 끝난 다음부터 센다
   check('3번째를 위로 올리면 2번째와 자리를 바꾼다', A.ctx.moveQuestion(room, b3.id, -1) === true && order() === ids(b1, b3, b2));
   A.ctx.saveGame(); A.ctx.renderBoard();
   rows = A.ctx.boardRows(room);
@@ -44,7 +44,7 @@ const vm = require('vm');
   A.ctx.viewBoard(b2.id);
   check('판 위의 「n번째 질문판」 표시도 바뀐다', require('fs').readFileSync('index.html', 'utf8').includes("(kept.indexOf(g)+1)+'번째 질문판'") && A.ctx.keptBoards(room).indexOf(b2) === 2);
   check('순서를 바꿔도 진행 중인 판과 카드는 그대로', room.activeBoardId === b1.id && b1.cards.length === 1 && b1.cards[0].boardId === b1.id);
-  await sleep(350);
+  await sleep(1500);
   check('순서만 바꾼 것으로는 학생에게 설정을 다시 보내지 않는다', cfgs() === n0 && S1.S.cfg.question === '가젤은 사자를 용서해야 할까?');
 
   console.log('B3. 휴지통에 있는 판은 건너뛴다');
@@ -115,7 +115,7 @@ const vm = require('vm');
   check('카드가 없는 판은 맞바꿔도 된다', E(noCards, '반대', '찬성') === '' && E(null, '반대', '찬성') === '');
   check('예전 수업에 양쪽 이름이 같은 판이 있어도 고쳐 나올 수 있다', E({ left: '같음', right: '같음', cards: [{}] }, '같음', '다름') === '' && E({ left: '같음', right: '같음', cards: [{}] }, '다름', '같음') === '');
 
-  await until(() => S1.S.cfg.left === b1.left, 5000, '앞에서 고친 끝 이름 수신'); await sleep(350); // 앞 묶음의 설정 전송이 끝난 뒤부터 센다
+  await until(() => S1.S.cfg.left === b1.left, 5000, '앞에서 고친 끝 이름 수신'); await sleep(1500); // 앞 묶음의 설정 전송이 끝난 뒤부터 센다
   A.ctx.viewBoard(other.id); A.ctx.editFromList(b1.id);
   check('카드가 놓인 판을 고칠 때는 장수와 함께 알린다', !A.$('#setup-warn').classList.contains('hide') && A.$('#setup-warn').textContent.includes('카드 1장') && A.$('#setup-warn').textContent.includes('오탈자만'), A.$('#setup-warn').textContent);
   const before = [b1.question, b1.left, b1.right].join('|'), n9 = cfgs();
@@ -154,8 +154,8 @@ const vm = require('vm');
   A.ctx.viewBoard(other.id);
   check('다른 판을 열어 보면 돌아가기 단추가 나타난다', !A.$('#t-current').classList.contains('hide') && A.$('#t-activate').textContent === '이 질문 시작');
   check('도구 줄에 돌아가기 단추가 「이 질문 시작」 앞에 있고 둘 사이를 띄운다', src.includes('<button id="t-boards">질문판 목록</button><button id="t-current" class="hide"') && src.includes('aria-label="진행 중인 질문으로 돌아가기">↩ <span class="tc-long">진행 중인 질문으로 </span>돌아가기</button><button id="t-activate">') && src.includes('#t-current:not(.hide)+#t-activate{margin-left:18px}'));
-  await sleep(350); const n10 = cfgs(); // 앞 묶음의 설정 전송이 끝난 뒤부터 센다
-  A.$('#t-current').onclick(); await sleep(350);
+  await sleep(1500); const n10 = cfgs(); // 앞 묶음의 설정 전송이 끝난 뒤부터 센다
+  A.$('#t-current').onclick(); await sleep(1500);
   check('돌아가기를 누르면 진행 중인 판을 본다', A.T.viewedBoardId === b1.id && A.T.g === b1 && A.$('#t-current').classList.contains('hide'));
   check('돌아가기는 학생 화면을 바꾸지 않는다', room.activeBoardId === b1.id && cfgs() === n10 && S1.S.cfg.boardId === b1.id);
   A.$('#t-current').onclick();

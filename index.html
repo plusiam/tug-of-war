@@ -273,6 +273,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 .qrbox{text-align:center}
 .qrbox svg{width:min(60vh,340px);height:auto}
 .qrbox .bigcode{font-size:64px;font-weight:900;letter-spacing:12px;margin:4px 0}
+.qrbox .bigcode.six{letter-spacing:6px;white-space:nowrap} /* 6자리 코드(123 456): 한 줄에 들어가게 자간을 줄인다 */
 .qrbox .url{font-size:15px;color:var(--sub);word-break:break-all}
 .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 /* 질문판 목록의 한 줄: 질문은 윗줄에 통째로, 아랫줄에 상태와 ↑ ↓ 고치기 삭제 */
@@ -537,6 +538,7 @@ body.has-sel .toast{bottom:84px}
   .qr-ov .qrbox h2{margin-bottom:6px}
   .qr-ov .qrbox svg{display:block;margin:0 auto;width:min(100%,56vh)}
   .qr-ov .qrbox .bigcode{font-size:clamp(60px,25vw,120px);line-height:1.1;letter-spacing:.1em;margin:6px -.1em 2px 0}
+  .qr-ov .qrbox .bigcode.six{font-size:clamp(40px,15.5vw,110px);letter-spacing:.04em;margin-right:-.04em}
   .qr-ov .qrbox .url{font-size:14px}
   .qr-ov .actions{margin-top:10px}
   .qr-ov .actions button{flex:1 1 0}
@@ -695,7 +697,7 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
 <section id="join-view" class="wrap hide">
   <h1>생각 줄다리기<span class="role-badge">학생 화면</span></h1>
   <div class="panel">
-    <div class="field"><label for="j-code">접속 코드</label><input type="text" id="j-code" inputmode="numeric" maxlength="4" placeholder="숫자 4자리"></div>
+    <div class="field"><label for="j-code">접속 코드</label><input type="text" id="j-code" inputmode="numeric" maxlength="12" placeholder="숫자 6자리" autocomplete="off"></div>
     <div class="field"><label for="j-name">번호 또는 별명</label><input type="text" id="j-name" maxlength="12" placeholder="예) 7번"></div>
     <div class="row" style="justify-content:space-between">
       <span class="note" id="j-msg"></span>
@@ -859,6 +861,14 @@ function show(id) { for (const s of document.querySelectorAll('body > section'))
   const gv = document.querySelector('#grp-view'); if (gv) gv.classList.remove('open');
   if (id !== 'board-view') { T.big = null; const b = document.querySelector('#bigq'); if (b) { b.classList.add('hide'); b.innerHTML = ''; } }
   syncWake(); }
+/* 접속 코드: 무작위 5자리 + 검사 숫자 1자리(Damm 방식). 숫자 하나를 잘못 누르거나 이웃한 두 숫자를 바꿔 눌러도
+   다른 수업의 코드가 되지 않는다. 예전에 만든 수업의 4자리 코드도 그대로 받는다. */
+const DAMM = ['0317598642', '7092154863', '4206871359', '1750983426', '6123045978', '3674209581', '5869720134', '8945362017', '9438617205', '2581436790'];
+function codeCheck(digits) { let i = 0; for (const d of digits) i = +DAMM[i][+d]; return String(i); }
+function makeCode() { const base = String(10000 + Math.floor(Math.random() * 90000)); return base + codeCheck(base); }
+function validCode(code) { return typeof code === 'string' && (/^\d{4}$/.test(code) || (/^\d{6}$/.test(code) && codeCheck(code) === '0')); }
+function cleanCode(v) { return String(v == null ? '' : v).replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/\D/g, ''); } // 띄어쓰기·전각 숫자를 걷어 낸 숫자만
+function fmtCode(code) { return /^\d{6}$/.test(code) ? code.slice(0, 3) + ' ' + code.slice(3) : String(code); } // 화면에는 123 456처럼 띄워 보여 준다
 function studentUrl(code) { return location.origin + location.pathname + '?c=' + code; }
 function qrSvg(text) {
   const qr = qrcode(0, 'M'); qr.addData(text); qr.make();
@@ -941,14 +951,14 @@ function editFromList(id) {const back=T.viewedBoardId;viewBoard(id);if(T.viewedB
 function confirmTrashBoard(id) {
  const reason=trashReason(T.room,id);if(reason)return toast(reason);
  const b=T.room.boards.find(b=>b.id===id);
- modal('<h2>질문판 삭제 확인</h2><p><b>'+esc(b.question)+'</b></p><p>접속 코드 '+esc(T.room.code)+' · 근거 '+b.cards.length+'장</p><p>이 질문판과 응답을 목록에서 빼고 휴지통으로 옮길까요? 다른 질문판과 학생의 진행 화면은 그대로예요. 나중에 복원할 수 있습니다.</p><div class="actions"><button data-cancel>취소</button><button data-confirm>휴지통으로 이동</button></div>',(ov,close)=>{ov.querySelector('[data-cancel]').onclick=()=>{close();boardList();};ov.querySelector('[data-confirm]').onclick=()=>{const issue=trashReason(T.room,id);if(issue){close();toast(issue);return;}trashQuestion(T.room,id);saveGame();if(T.viewedBoardId===id)viewBoard(T.room.activeBoardId);else renderBoard();close();boardList();toast('질문판을 휴지통으로 옮겼어요. 복원할 수 있어요.');};});
+ modal('<h2>질문판 삭제 확인</h2><p><b>'+esc(b.question)+'</b></p><p>접속 코드 '+esc(fmtCode(T.room.code))+' · 근거 '+b.cards.length+'장</p><p>이 질문판과 응답을 목록에서 빼고 휴지통으로 옮길까요? 다른 질문판과 학생의 진행 화면은 그대로예요. 나중에 복원할 수 있습니다.</p><div class="actions"><button data-cancel>취소</button><button data-confirm>휴지통으로 이동</button></div>',(ov,close)=>{ov.querySelector('[data-cancel]').onclick=()=>{close();boardList();};ov.querySelector('[data-confirm]').onclick=()=>{const issue=trashReason(T.room,id);if(issue){close();toast(issue);return;}trashQuestion(T.room,id);saveGame();if(T.viewedBoardId===id)viewBoard(T.room.activeBoardId);else renderBoard();close();boardList();toast('질문판을 휴지통으로 옮겼어요. 복원할 수 있어요.');};});
 }
 function trashList() {
  const list=T.room.boards.filter(b=>b.deletedAt!==undefined);
  modal('<h2>질문판 휴지통</h2><p class="note">응답·수정 이력은 보관돼요. 복원해도 학생에게 자동 제시되지 않아요. JSON 백업에도 휴지통을 함께 저장합니다.</p>'+list.map(b=>'<div class="row" style="margin:10px 0"><span>'+esc(b.question)+' · '+b.cards.length+'장</span><button data-restore="'+b.id+'">복원</button></div>').join('')+(!list.length?'<p>휴지통이 비어 있어요.</p>':'')+'<div class="actions"><button data-back>질문판 목록</button><button data-close>닫기</button></div>',(ov,close)=>{ov.querySelectorAll('[data-restore]').forEach(e=>e.onclick=()=>{if(restoreQuestion(T.room,e.dataset.restore)){saveGame();renderBoard();}close();trashList();toast('질문판과 응답을 복원했어요.');});ov.querySelector('[data-back]').onclick=()=>{close();boardList();};ov.querySelector('[data-close]').onclick=close;});
 }
 function savedRooms() {migrateStoredGames();const rooms=allStoredRooms();modal('<h2>보관한 수업</h2>'+rooms.map(r=>'<p><button data-room="'+r.storageId+'">'+esc(keptBoards(r)[0]?.question)+' · '+keptBoards(r).length+'판 · '+new Date(r.created).toLocaleDateString('ko-KR')+'</button></p>').join('')+'<button data-close>닫기</button>',(ov,close)=>{ov.querySelectorAll('[data-room]').forEach(e=>e.onclick=()=>{close();const r=rooms.find(r=>r.storageId===e.dataset.room);openRoom(r);});ov.querySelector('[data-close]').onclick=close;});}
-async function freshCode() {for(let i=0;i<12;i++){const code=String(1000+Math.floor(Math.random()*9000));if(LS.get(gameKey(code))||allStoredRooms().some(r=>r.code===code))continue;let taken;try{taken=await codeTaken(code);}catch{throw Error('연결을 확인하지 못했어요. 인터넷을 확인하고 다시 눌러 주세요.');}if(!taken)return code;}throw Error('빈 코드를 찾지 못했어요. 잠시 뒤 다시 시도해 주세요.');}
+async function freshCode() {for(let i=0;i<12;i++){const code=makeCode();if(LS.get(gameKey(code))||allStoredRooms().some(r=>r.code===code))continue;let taken;try{taken=await codeTaken(code);}catch{throw Error('연결을 확인하지 못했어요. 인터넷을 확인하고 다시 눌러 주세요.');}if(!taken)return code;}throw Error('빈 코드를 찾지 못했어요. 잠시 뒤 다시 시도해 주세요.');}
 async function resumeRoom() {try {const code=await freshCode();T.room.code=code;T.room.offline=false;T.room.boards.forEach(b=>b.code=code);T.probeCode=code;T.codeAt=Date.now();saveGame();openBoard();showQR();}catch(e){toast(e.message,6000);}}
 function activateViewed() {if(T.g.deletedAt!==undefined)return toast('휴지통의 질문판은 먼저 복원해 주세요.');if(T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');const changed=T.room.activeBoardId!==T.viewedBoardId;T.room.activeBoardId=T.viewedBoardId;saveGame();pushConfig();renderBoard();if(changed)toast('학생 화면을 이 질문으로 바꿨어요.',3500);}
 function backToActive() {if(T.room&&T.viewedBoardId!==T.room.activeBoardId)viewBoard(T.room.activeBoardId);} // 열람을 마치고 진행 중인 판으로(학생 화면은 그대로)
@@ -1287,7 +1297,7 @@ function showHome() {
   const last = LS.get(roomKey(LS.get('tow:lastRoom'))) || allStoredRooms()[0];
   $('#resume-box').classList.toggle('hide', !last);
   if (!last) return;
-  $('#resume-code').textContent = last.code;
+  $('#resume-code').textContent = fmtCode(last.code);
   { const kept = keptBoards(last), act = kept.find(b => b.id === last.activeBoardId) || kept[0];
     $('#resume-q').textContent = act.question + (kept.length > 1 ? ' · ' + (kept.indexOf(act) + 1) + '번째 질문(모두 ' + kept.length + '개)' : ''); }
 }
@@ -1418,7 +1428,7 @@ function renderBig() {
     el.innerHTML = '<div class="bq-topline">' + tabs + '</div><div class="bq-main"><div class="bq-q">' + esc(g.question) + '</div>' +
       (cur ? '<div class="bq-wf"><span>그런데 만약에?</span>' + esc(wfBody(cur.text)) + '</div>' : '') +
       '<div class="bq-ends"><span class="L">◀ ' + esc(g.left) + '</span><span class="R">' + esc(g.right) + ' ▶</span></div></div>' +
-      '<div class="bq-foot"><span class="bq-info">' + (live ? '접속 코드 <b>' + esc(g.code) + '</b> · ' : '') + '입장 ' + joined + '명 중 ' + sent + '명 보냄</span><span class="bq-act">' +
+      '<div class="bq-foot"><span class="bq-info">' + (live ? '접속 코드 <b>' + esc(fmtCode(g.code)) + '</b> · ' : '') + '입장 ' + joined + '명 중 ' + sent + '명 보냄</span><span class="bq-act">' +
       (cur ? '<button type="button" data-bq="first">처음 질문만</button>' : '') + (next ? '<button type="button" data-bq="next">다음 추가 질문 보이기</button>' : '') + close + '</span></div>';
     return;
   }
@@ -1626,7 +1636,7 @@ function renderBoard() {
   const kept=keptBoards(T.room), ord=kept.length>1&&kept.indexOf(g)>=0?(kept.indexOf(g)+1)+'번째 질문판':'';
   const viewNote=[ord,T.room.offline?'오프라인 보관':!responding?'보관판 열람':paused?'응답 잠시 멈춤':'',g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'이전 버전 여러 카드 보관':''].filter(Boolean).join(' · ');
   $('#b-q').innerHTML=questionHeadingHTML(g.question,responding&&!wf&&!paused,viewNote,'교사가 준비한 질문');
-  $('#b-code b').textContent = T.room.offline ? '오프라인' : g.code;
+  $('#b-code b').textContent = T.room.offline ? '오프라인' : fmtCode(g.code);
   $('#b-l').textContent = '◀ ' + g.left; $('#b-r').textContent = g.right + ' ▶';
   $('#t-names').classList.toggle('on', g.showNames); $('#t-names').textContent = g.showNames ? '이름 보이기: 켜짐' : '이름 보이기: 꺼짐'; $('#t-names').setAttribute('aria-pressed', String(!!g.showNames));
   $('#t-share').classList.toggle('on', g.share);
@@ -2082,7 +2092,7 @@ function cleanupGroups() {
 }
 function showQR() {
   const url = studentUrl(T.g.code);
-  const qr = modal(`<div class="qrbox"><h2>학생 접속</h2>${qrSvg(url)}<div class="bigcode">${T.g.code}</div><div class="url">${esc(url)}</div></div>
+  const qr = modal(`<div class="qrbox"><h2>학생 접속</h2>${qrSvg(url)}<div class="bigcode${T.g.code.length > 4 ? ' six' : ''}">${fmtCode(T.g.code)}</div><div class="url">${esc(url)}</div></div>
     <div class="actions"><button data-a="copy">주소 복사</button><button class="primary" data-a="close">닫기</button></div>`, (ov, close) => {
     ov.querySelector('[data-a=close]').onclick = close;
     ov.querySelector('[data-a=copy]').onclick = () => navigator.clipboard.writeText(url).then(() => toast('주소를 복사했어요'));
@@ -2506,7 +2516,7 @@ function validateBackup(raw) {
  const arr=(v,n)=>{if(!Array.isArray(v)||v.length>n)fail('목록 크기');};
  const date=v=>integer(v,0,Date.now()+86400000);
  obj(raw,['app','schemaVersion','exportedAt','room']);if(raw.app!==APP_MARKER||raw.schemaVersion!==ROOM_VERSION)fail('지원하지 않는 형식/버전');if(typeof raw.exportedAt!=='string'||!/^\d{4}-\d\d-\d\dT/.test(raw.exportedAt)||!Number.isFinite(Date.parse(raw.exportedAt))||new Date(raw.exportedAt).toISOString()!==raw.exportedAt)fail('내보낸 날짜');
- const r=raw.room;obj(r,['schemaVersion','storageId','code','created','configSeq','legacyBoardId','activeBoardId','boards','offline','legacySource']);if(r.schemaVersion!==ROOM_VERSION)fail('수업 버전');id(r.storageId);if(typeof r.code!=='string'||!/^\d{4}$/.test(r.code))fail('접속 코드');date(r.created);integer(r.configSeq,0,Number.MAX_SAFE_INTEGER-1000);id(r.legacyBoardId);id(r.activeBoardId);bool(r.offline);if(r.legacySource!==undefined){str(r.legacySource,40);if(!/^tow:game:\d{4}$/.test(r.legacySource))fail('이관 출처');}arr(r.boards,200);if(!r.boards.length)fail('빈 수업');
+ const r=raw.room;obj(r,['schemaVersion','storageId','code','created','configSeq','legacyBoardId','activeBoardId','boards','offline','legacySource']);if(r.schemaVersion!==ROOM_VERSION)fail('수업 버전');id(r.storageId);if(!validCode(r.code))fail('접속 코드');date(r.created);integer(r.configSeq,0,Number.MAX_SAFE_INTEGER-1000);id(r.legacyBoardId);id(r.activeBoardId);bool(r.offline);if(r.legacySource!==undefined){str(r.legacySource,40);if(!/^tow:game:\d{4}$/.test(r.legacySource))fail('이관 출처');}arr(r.boards,200);if(!r.boards.length)fail('빈 수업');
  const bids=new Set(),cardIds=new Set();let total=0;
  for(const b of r.boards){obj(b,['id','code','question','left','right','cards','groups','whatif','whatifArchive','showNames','showCount','share','fs','created','deletedAt']);if(b.deletedAt!==undefined)date(b.deletedAt);id(b.id);if(bids.has(b.id))fail('중복 질문판');bids.add(b.id);if(b.code!==r.code)fail('코드 불일치');str(b.question,80);str(b.left,24);str(b.right,24);if(!b.question.trim()||!b.left.trim()||!b.right.trim())fail('빈 질문');date(b.created);bool(b.showNames);bool(b.showCount);bool(b.share);num(b.fs,.7,1.8);arr(b.whatif,500);arr(b.whatifArchive,500);[...b.whatif,...b.whatifArchive].forEach(w=>str(w,60));const maxStage=b.whatif.length+b.whatifArchive.length;
  if(!b.groups||typeof b.groups!=='object'||Array.isArray(b.groups)||Object.getPrototypeOf(b.groups)!==Object.prototype)fail('묶음');if(Object.keys(b.groups).length>5000)fail('묶음 크기');for(const [gid,g]of Object.entries(b.groups)){id(gid);obj(g,['label','color']);str(g.label,16);if(typeof g.color!=='string'||!/^#[0-9a-fA-F]{6}$/.test(g.color))fail('묶음 색');}
@@ -2536,13 +2546,14 @@ function saveMe() { LS.set(meKey(S.code, S.me.name), S.me); LS.set(nameKey(S.cod
 const stOf = c => c.stage || 0;
 function openJoin(code) {
   show('join-view');
-  $('#j-code').value = code || ''; $('#j-name').value = code ? lastName(code) : '';
+  $('#j-code').value = code ? fmtCode(code) : ''; $('#j-name').value = code ? lastName(code) : '';
   $('#j-msg').textContent = '';
   (code ? $('#j-name') : $('#j-code')).focus();
 }
 $('#j-go').onclick = () => {
-  const code = $('#j-code').value.trim(), name = $('#j-name').value.trim();
-  if (!/^\d{4}$/.test(code)) return ($('#j-msg').textContent = '접속 코드 4자리를 적어 주세요');
+  const code = cleanCode($('#j-code').value), name = $('#j-name').value.trim(); // 띄어 적은 「123 456」·「12 34 56」도 받는다
+  if (code.length !== 6 && code.length !== 4) return ($('#j-msg').textContent = '접속 코드 숫자 6자리를 적어 주세요');
+  if (!validCode(code)) return ($('#j-msg').textContent = '접속 코드가 맞지 않아요. 숫자를 다시 확인해 주세요.');
   if (!name) return ($('#j-msg').textContent = '번호나 별명을 적어 주세요');
   joinGame(code, name);
 };
@@ -2672,7 +2683,7 @@ function renderStudent() {
   const c = S.cfg; if (!c) return;
   // 단계가 바뀌면(만약에 시작·내림) 쓰던 ‘옮기기’는 취소한다
   if (S.from && !curStage()) resetForm();
-  $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
+  $('#s-who').textContent = `코드 ${fmtCode(S.code)} · ${S.me.name}`;
   $('#student-view').classList.toggle('closed', !!S.closed); $('#s-closed').classList.toggle('hide', !S.closed);
   const open=studentStageOpen();
   $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&curStage()===0,!open?'응답 잠시 멈춤':'');
@@ -2979,8 +2990,8 @@ $('#s-leave').onclick = () => { saveDraft(); leaveChannels(); S.joinId = null; h
 $('#go-teacher').onclick = () => openSetup(false);
 $('#go-student').onclick = () => openJoin('');
 $('#resume-btn').onclick=()=>{const r=LS.get(roomKey(LS.get('tow:lastRoom')))||allStoredRooms()[0];if(r)openRoom(r);};
-(function init(){migrateStoredGames();const p=new URLSearchParams(location.search),c=p.get('c'),t=p.get('t'),rid=p.get('room');
- if(c&&/^\d{4}$/.test(c)){let nm=null;try{nm=sessionStorage.getItem(nameKey(c));}catch{}const me=nm&&loadMe(c,nm);if(me?.name)joinGame(c,me.name);else openJoin(c);return;}
+(function init(){migrateStoredGames();const p=new URLSearchParams(location.search),c=cleanCode(p.get('c')),t=p.get('t'),rid=p.get('room');
+ if(c&&validCode(c)){let nm=null;try{nm=sessionStorage.getItem(nameKey(c));}catch{}const me=nm&&loadMe(c,nm);if(me?.name)joinGame(c,me.name);else openJoin(c);return;}
  const r=rid?LS.get(roomKey(rid)):t?allStoredRooms().find(r=>r.code===t):null;
  if(r){openRoom(r);return;}showHome();
 })();
