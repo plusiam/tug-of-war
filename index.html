@@ -669,7 +669,7 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
 <section id="student-view" class="wrap hide">
   <div class="row" style="justify-content:space-between;margin-bottom:8px">
     <span class="note"><span class="role-badge">학생 화면</span><span class="dot" id="s-dot"></span><span id="s-who"></span></span>
-    <button id="s-leave" style="font-size:13px;padding:4px 10px">나가기</button>
+    <span style="display:flex;gap:6px"><button id="s-reload" style="font-size:13px;padding:4px 10px" title="화면이 멈췄거나 새로고침하라는 안내가 뜨면 눌러요. 보낸 근거와 쓰던 글은 남아요.">새로고침</button><button id="s-leave" style="font-size:13px;padding:4px 10px">나가기</button></span>
   </div>
   <p class="s-q" id="s-q"></p>
   <div class="s-wf hide" id="s-wf"></div>
@@ -2274,6 +2274,7 @@ function moreMenu() {
       ${phoneOnly('json', '수업 저장(JSON)')}
       ${phoneOnly('import', '저장한 수업 불러오기')}
       <button data-a="saved">보관한 수업 목록</button>
+      <button data-a="reload">새로고침 (최신 화면으로 · 수업은 그대로)</button>
       <button data-a="home">수업 닫고 처음 화면으로</button>
     </div><div class="actions"><button class="primary" data-a="close">닫기</button></div>`, (ov, close) => {
     ov.querySelector('[data-a=close]').onclick = close;
@@ -2283,6 +2284,7 @@ function moreMenu() {
     ov.querySelector('[data-a=unhide]').onclick = () => { T.g.cards.forEach(c => c.hidden = false); saveGame(); renderBoard(); pushConfig(); close(); };
     ov.querySelector('[data-a=new]').onclick=()=>{close();openSetup('new');};
     ov.querySelector('[data-a=saved]').onclick=()=>{close();savedRooms();};
+    ov.querySelector('[data-a=reload]').onclick=()=>{close();reloadApp();};
     ov.querySelector('[data-a=home]').onclick = () => { close(); confirmLeaveTeacher(); };
     const phoneActions = {
       next: nextQuestion, whatif: askWhatif, sum: openSummary,
@@ -2814,6 +2816,10 @@ function submitComposer(){
   saveDraft();saveMe();$('#s-cancel-edit').classList.remove('hide');sendCard(c);
 }
 $('#s-send').onclick=submitComposer;
+// 새로고침 단추(학생 화면 위쪽, 교사 ⋯ 메뉴): 브라우저에 남은 예전 파일 대신 최신 파일을 받아 온 뒤 다시 연다.
+// 수업·보낸 근거·쓰던 글은 이 기기에 남고, 같은 탭이면 학생은 이름을 다시 넣지 않고 들어온다
+function reloadApp() { saveDraft(); toast('새로고침하는 중…'); fetch(location.pathname + location.search, { cache: 'reload' }).catch(() => {}).finally(() => location.reload()); }
+$('#s-reload').onclick = reloadApp;
 $('#s-leave').onclick = () => { saveDraft(); leaveChannels(); S.joinId = null; history.replaceState(null, '', location.pathname); openJoin(''); };
 
 /* =================== 시작 =================== */

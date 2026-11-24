@@ -64,6 +64,19 @@ const { rejections, makeBus, makePage, sleep, until, check, summary } = require(
   S4.ctx.setSide('L'); S4.ctx.renderComposerStatus();
   check('쪽을 고르면 강조가 풀리고 보낼 수 있다', !S4.$('#s-send-status').dataset.need && !S4.$('#s-selection').dataset.need && S4.$('#s-send').disabled === false);
 
+  console.log('K5. 새로고침 단추');
+  { let reloads = 0; S4.location.reload = () => { reloads++; };
+    type(S4, '새로고침 전에 쓰던 글'); S4.ctx.setSide('R');
+    S4.$('#s-reload').onclick();
+    await sleep(100);
+    check('학생 새로고침: 쓰던 글을 보관한 뒤 화면을 다시 연다', reloads === 1 && S4.S.me.drafts[g.id]?.text === '새로고침 전에 쓰던 글' && S4.toasts.at(-1) === '새로고침하는 중…', 'reloads ' + reloads);
+    let tr = 0; A.location.reload = () => { tr++; }; const snap = JSON.stringify(A.T.room);
+    A.ctx.reloadApp(); await sleep(100);
+    check('교사 새로고침: 수업 자료를 바꾸지 않고 화면만 다시 연다', tr === 1 && JSON.stringify(A.T.room) === snap);
+    A.ctx.moreMenu();
+    check('교사 ⋯ 메뉴에 「새로고침」이 있다', A.overlays().at(-1).innerHTML.includes('data-a="reload"'));
+    A.overlays().at(-1).remove(); }
+
   await sleep(200);
   check('처리되지 않은 오류 없음', rejections.length === 0, rejections.join(' | '));
   summary();

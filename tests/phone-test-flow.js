@@ -236,7 +236,7 @@ const lastOverlay = page => page.overlays().at(-1);
   check('폰 ⋯ 메뉴: 뺀 기능과 「수업 닫고 처음 화면으로」가 있고 묶음 풀기는 없다', ['boards', 'names', 'count', 'export', 'json', 'import', 'home', 'edit', 'unhide', 'new', 'saved'].every(a => html.includes('data-a="' + a + '"')) && !html.includes('data-a="auto"'));
   lastOverlay(A).remove();
   A.width = 1024; A.ctx.moreMenu(); html = lastOverlay(A).innerHTML; lastOverlay(A).remove();
-  check('넓은 화면 ⋯ 메뉴: 기존 5개 + 「그런데 만약에?」 + 「수업 닫고 처음 화면으로」만', ['edit', 'auto', 'unhide', 'whatif', 'new', 'saved', 'home'].every(a => html.includes('data-a="' + a + '"')) && (html.match(/data-a="/g) || []).length === 8 && !html.includes('data-a="boards"'));
+  check('넓은 화면 ⋯ 메뉴: 기존 5개 + 「그런데 만약에?」 + 「새로고침」 + 「수업 닫고 처음 화면으로」만', ['edit', 'auto', 'unhide', 'whatif', 'new', 'saved', 'reload', 'home'].every(a => html.includes('data-a="' + a + '"')) && (html.match(/data-a="/g) || []).length === 9 && !html.includes('data-a="boards"'));
   A.width = 360;
 
   console.log('C4. 수업 닫고 처음 화면으로');
