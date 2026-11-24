@@ -47,7 +47,20 @@ const html = fs.readFileSync('index.html', 'utf8');
   A.ctx.saveGame(); A.ctx.pushConfig(); A.ctx.renderBoard();
 
   console.log('C3. 선 연결 안내');
-  check('만약에 생각 줄 이름표에 「카드를 누르면 … 선으로 이어져요」', A.$('#b-lane-bot').innerHTML.includes('카드를 누르면 같은 학생의 처음 자리와 선으로 이어져요'), A.$('#b-lane-bot').innerHTML.slice(0, 120));
+  check('질문 영역에 「카드를 누르면 … 선으로 이어져요」(카드 뒤 배경 글씨에는 넣지 않는다)', A.$('#b-whatif').innerHTML.includes('판에서 카드를 누르면 같은 학생의 처음 자리와 선으로 이어져요.') && !A.$('#b-lane-bot').innerHTML.includes('선으로 이어져요'), A.$('#b-whatif').innerHTML.slice(-120));
+  A.T.maskOff = null; A.ctx.renderBoard();
+  check('추가 질문을 가린 동안에는 안내를 넣지 않는다', A.ctx.extraMasked() && !A.$('#b-whatif').innerHTML.includes('선으로 이어져요'));
+  A.width = 375; A.T.maskOff = g.id; A.ctx.renderBoard();
+  check('휴대폰 교사 화면(선이 없음)에는 안내를 넣지 않는다', !A.$('#b-whatif').innerHTML.includes('선으로 이어져요'));
+  A.width = 1100; A.ctx.renderBoard();
+  console.log('C5. 알림이 선택 도구 줄을 덮지 않는다');
+  check('고른 카드가 없으면 알림은 제자리', !A.body.classList.contains('has-sel'));
+  { const c0 = { boardId: g.id, from: null, hidden: false, history: [], id: 'selcard00001', likes: [], name: '1번', rev: 0, sid: 'selsid000001', side: 'L', strength: 3, stage: 0, text: '고를 카드' };
+    g.cards.push(c0); A.T.sel.add(c0.id); A.ctx.updateSelbar();
+    check('카드를 고른 동안은 알림을 선택 도구 줄 위로 올린다', A.body.classList.contains('has-sel') && !A.$('#selbar').classList.contains('hide') && html.includes('body.has-sel .toast{bottom:84px}'));
+    A.T.sel.clear(); A.ctx.updateSelbar();
+    check('선택을 풀면 알림이 제자리로', !A.body.classList.contains('has-sel'));
+    g.cards = g.cards.filter(c => c !== c0); }
 
   console.log('S4. 줄 고정 되돌림');
   check('줄 상자를 화면에 붙이는 규칙과 펼침 감지 코드가 없다', !html.includes('position:sticky;top:0;z-index:3') && !html.includes("classList.toggle('adjust'"));

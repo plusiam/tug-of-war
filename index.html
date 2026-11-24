@@ -273,6 +273,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 .qrbox .url{font-size:15px;color:var(--sub);word-break:break-all}
 .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;z-index:300;font-size:15px}
+body.has-sel .toast{bottom:84px}
 
 /* ---------- 학생 화면 ---------- */
 .s-q{font-size:22px;font-weight:800;line-height:1.4;margin:0 0 6px}
@@ -382,7 +383,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #s-count.full{color:#a12c23;font-weight:700}
 .wf-inrow{display:flex;gap:8px;align-items:center}.wf-inrow input{flex:1;min-width:0}.wf-pre{font-weight:800;white-space:nowrap;color:#8a6d00}
 .wf-more{margin:6px 0 10px}.wf-more summary{cursor:pointer;font-weight:700}.wf-more p{margin:6px 0 0}
-.lane-hint{font-size:13px;font-weight:600;opacity:.75}
+.link-hint{display:block;margin-top:4px;font-size:14px;font-weight:600;color:#6b5200}
 #b-participants .pt-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:2px 0}
 #b-participants .pt-row button{font-size:12px;padding:2px 8px;white-space:nowrap}
 /* 쪽은 바뀌었는데 근거 글이 앞선 그대로일 때: 근거 칸 바로 위에서 알린다 */
@@ -1583,13 +1584,15 @@ function renderBoard() {
   // 진행 중인 판의 응답이 멈춰 있으면 그 사실과 「응답 다시 받기」를 질문 바로 아래에 보인다(가려 둔 상태에서도 보인다. 질문 글은 넣지 않는다)
   const pauseNote=responding&&paused?'<span class="qh-paused wf-pause">응답 잠시 멈춤 · 학생들이 지금은 답을 보낼 수 없어요. <button type="button" class="primary" data-wf-resume>응답 다시 받기</button></span>':'';
   $('#b-whatif').innerHTML=masked?'<span class="qh-meta"><span class="qh-label">추가 질문</span></span><span class="qh-paused">가려 두었어요 · 「보기 설정」에서 「추가 질문 가리기」를 끄면 추가 질문과 만약에 생각이 보여요.</span>'+pauseNote:pauseNote?pauseNote:wf?extraQuestionHTML(wf,boardInputStage(g),responding,responding?'학생에게 순서대로 공개':'보관 중 · 학생 응답 아님','교사가 준비한 질문'):'<span class="qh-paused">다음 추가 질문을 기다리는 중 · 지금은 답을 보내지 않아요.</span>';
+  // 만약에 카드가 판에 보일 때(넓은 판): 카드를 누르면 처음 자리와 이어진다는 것을 질문 영역에서 알린다. 줄 이름표는 카드 뒤 배경 글씨라 가려진다
+  if (!masked && !isPhoneBoard() && lastStage() > 0) $('#b-whatif').innerHTML += '<span class="link-hint">판에서 카드를 누르면 같은 학생의 처음 자리와 선으로 이어져요.</span>';
   renderCounts(); renderStageBar();renderParticipants();
   const ls = lastStage(), wfs = allWhatifs(), past = ls !== latestStage(g);
   // 회차 고르기가 보이면 다른 회차 카드는 거기서 다시 볼 수 있으므로 안내 글을 줄인다
   const older = wfs.filter(w => w !== WF_GONE).length >= 2 ? 0 : g.cards.filter(c => !c.hidden && stageOf(c) > 0 && stageOf(c) !== ls).length;
   const lb = $('#b-lane-bot');
   lb.className = 'lane bot' + (ls ? '' : ' wait');
-  lb.innerHTML = ls ? `<b>${past ? '지난 만약에 생각' : '만약에 생각'}</b><span>${esc(wfs[ls - 1])}</span><span class="lane-hint">카드를 누르면 같은 학생의 처음 자리와 선으로 이어져요</span>${older ? `<span style="font-size:13px;font-weight:600">앞선 만약에 카드 ${older}장은 내보내기에 남아 있어요</span>` : ''}`
+  lb.innerHTML = ls ? `<b>${past ? '지난 만약에 생각' : '만약에 생각'}</b><span>${esc(wfs[ls - 1])}</span>${older ? `<span style="font-size:13px;font-weight:600">앞선 만약에 카드 ${older}장은 내보내기에 남아 있어요</span>` : ''}`
     : '';
   // 만약에 전에는 처음 생각이 판 전체를 쓰므로 위·아래 구분 글자를 감춘다
   $('#b-lane-top').classList.toggle('hide', !ls); lb.classList.toggle('hide', !ls);
@@ -1946,6 +1949,7 @@ function drawHistoryGhosts(board,svg) {const w=board.clientWidth,h=board.clientH
 function updateSelbar() {
   for (const id of [...T.sel]) if (!T.g.cards.some(c => c.id === id && onBoard(c))) T.sel.delete(id);
   $('#selbar').classList.toggle('hide', T.sel.size === 0);
+  document.body.classList.toggle('has-sel', T.sel.size > 0); // 알림이 선택 도구 줄(묶기·제자리로·숨기기)을 덮지 않게 올린다
   $('#sel-n').textContent = T.sel.size + '장 선택';
   $('#s-ungroup').disabled = ![...T.sel].some(id => T.g.cards.find(c => c.id === id)?.group);
   const read = expShown();
