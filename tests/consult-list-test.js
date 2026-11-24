@@ -34,6 +34,9 @@ const html = fs.readFileSync('index.html', 'utf8');
   check('설명은 짧은 한 문단이고 나머지는 「자세히」에 접혀 있다', ov.innerHTML.includes('<details class="note wf-more"><summary>자세히</summary>') && ov.innerHTML.indexOf('순서대로 하나씩') > ov.innerHTML.indexOf('<summary>자세히</summary>') && ov.innerHTML.includes('응답 다시 받기'));
   { const head = ov.innerHTML.slice(ov.innerHTML.indexOf('<p class="note">') + 16, ov.innerHTML.indexOf('</p>'));
     check('창을 열면 바로 보이는 설명은 100자 안쪽', head.length > 20 && head.length <= 100, head.length + '자'); }
+  { const line = '<p class="note wf-ends">양쪽 끝 이름은 그대로 「' + g.left + '」 · 「' + g.right + '」예요. 끝 이름이 달라져야 하면 「새 질문 시작」으로 새 판을 여세요.</p>';
+    check('입력 칸 바로 아래에 끝 이름은 그대로라는 안내와 지금 끝 이름이 있다', ov.innerHTML.includes(line) && ov.innerHTML.indexOf(line) > ov.innerHTML.indexOf('id="wf-in"'), g.left + ' / ' + g.right);
+    check('만약에 창에는 끝 이름을 고치는 칸이 없다', !ov.innerHTML.includes('id="in-l"') && (ov.innerHTML.match(/<input/g) || []).length === 1); }
   ov.querySelector('#wf-in').value = '그런데 만약에 비가 오면?';
   ov.querySelector('[data-a=ok]').onclick();
   check('같은 말로 시작해 띄우면 머리말을 떼고 저장한다', g.whatif.at(-1) === '비가 오면?');

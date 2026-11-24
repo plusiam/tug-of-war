@@ -2111,6 +2111,7 @@ function askWhatif() {
     ${canAsk && !T.g.whatif.length && latestStage(T.g) > 0 ? '<p class="note wf-warn">지금은 응답이 멈춰 있어요. 「응답 다시 받기」를 누르면 질문 번호는 그대로 두고 다시 받아요. 새 질문을 띄워도 다시 열려요.</p>' : ''}
     ${canAsk ? '' : '<p class="note wf-warn">지금 보는 질문판은 진행 중이 아니에요. 여기서 띄운 질문은 학생에게 가지 않아요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.</p>'}
     <div class="wf-inrow"><span class="wf-pre" aria-hidden="true">그런데 만약에</span><input type="text" id="wf-in" maxlength="60" aria-label="그런데 만약에 뒤에 이어질 질문" placeholder="예) 사자가 다시 커진다면?"${canAsk ? '' : ' disabled'}></div>
+    <p class="note wf-ends">양쪽 끝 이름은 그대로 「${esc(g.left)}」 · 「${esc(g.right)}」예요. 끝 이름이 달라져야 하면 「새 질문 시작」으로 새 판을 여세요.</p>
     ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">${masked ? '· 글을 가려 두었어요. 보거나 고치려면 먼저 「보기 설정」에서 「추가 질문 가리기」를 꺼 주세요' : '· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요'}</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
     <div class="actions">${T.g.whatif.length ? (canAsk ? '<button data-a="off">응답 잠시 멈추기</button>' : '') : canAsk && latestStage(T.g) > 0 ? '<button data-a="on">응답 다시 받기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
     const inp = ov.querySelector('#wf-in'); if (canAsk) inp.focus();
