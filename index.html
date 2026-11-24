@@ -369,7 +369,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #s-text{font-size:16px;line-height:1.5;min-height:72px;resize:vertical;display:block}
 .s-composer .field{margin-bottom:8px}.s-submit-row{display:flex;gap:8px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 #s-send-status{flex:1 1 180px;margin:0;min-width:0}#s-send-status[data-state="failed"]{color:#a12c23;font-weight:700}
-#s-send-status[data-state="arrived"]{color:#16713c}#s-send{min-width:100px}
+#s-send-status[data-state="arrived"]{color:#16713c}#s-send-status[data-need="side"],#s-selection[data-need="side"]{color:#a12c23;font-weight:700}#s-send{min-width:100px}
 #student-view .mycards .m{flex-wrap:wrap}#student-view .mycards .acts{flex-wrap:wrap}
 @media(max-width:360px){#student-view.wrap{padding:18px 12px 36px}#student-view .panel{padding:14px}}
 /* 학생 화면 질문 카드: 질문이 화면 제목이 아니라 '지금 생각할 것'으로 먼저 보이게 한다. 색은 양쪽 끝(파랑·빨강)·만약에(노랑)와 겹치지 않는 남색만 쓴다. */
@@ -2530,6 +2530,8 @@ function renderComposerStatus(){
   else if(currentCard()&&!state.disabled&&state.label!=='재전송')state.label='이번 생각 수정 보내기';
   b.disabled=state.disabled;b.textContent=state.label;status.dataset.state=state.state;status.textContent=(S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value+'. ':'')+state.message;
   $('#s-selection').textContent=S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value:'아직 쪽을 고르지 않았어요.';
+  // 근거는 썼는데 쪽을 고르지 않아 보내기가 꺼져 있을 때: 안내 두 곳을 눈에 띄게 한다(꺼진 단추는 눌러도 반응이 없으므로)
+  { const need=!S.side&&!!$('#s-text').value.trim()&&studentStageOpen()&&meta?.state!=='rejected'?'side':''; status.dataset.need=need; $('#s-selection').dataset.need=need; }
   $('#s-sideL').setAttribute('aria-pressed',String(S.side==='L'));$('#s-sideR').setAttribute('aria-pressed',String(S.side==='R'));
   $('#s-str').setAttribute('aria-valuetext','세기 '+$('#s-str').value);
 }
@@ -2610,7 +2612,8 @@ function keepSame(id) {
   S.me.cards.push(c);S.me.submissions ||= {};
   S.me.submissions[submissionKey(c.boardId,c.id)]={id:c.id,boardId:c.boardId,rev:c.rev,signature:null,snapshot:null,state:'sending',attempts:0};
   // Do not replace unsent typing when the shortcut is used.
-  S.target=c.id;saveDraft();saveMe();sendCard(c);toast(stOf(p)?'앞선 생각 그대로 보냈어요':'처음 생각 그대로 보냈어요');
+  // 그대로 보낸 자리를 작성 칸에도 놓는다. 비워 두면 근거만 덧붙이려는 학생의 「보내기」가 "쪽을 고르지 않았어요"로 꺼진다
+  S.target=c.id;if(!S.side){$('#s-str').value=p.strength;setSide(p.side);}saveDraft();saveMe();sendCard(c);toast(stOf(p)?'앞선 생각 그대로 보냈어요':'처음 생각 그대로 보냈어요');
 }
 function startFrom(id) {
   if(!curStage()||!studentStageOpen()||!myBoardCards().some(c=>c.id===id))return;
