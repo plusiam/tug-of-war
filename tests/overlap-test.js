@@ -1,0 +1,20 @@
+const {makeBus,makePage,check,summary}=require('./phone-test-harness');
+const p=makePage(makeBus(),{width:1366}), f=p.ctx.avoidCardOverlaps;
+const r=(id,left=0,top=170,height=30,group=null,right=left+150)=>({id,left,right,top,height,group});
+const eq=(m,id,y)=>Math.abs(m.get(id)-y)<.001;
+let a=[r('11',80,165),r('test',100,171)];const src=JSON.stringify(a);let m=f(a,164,302,1);
+check('manual/adjacent card: earlier stays',eq(m,'11',165));check('later card below earlier + gap',eq(m,'test',203));check('input rectangles not mutated',JSON.stringify(a)===src);
+a=[r('old',0,190,90),r('new',20,200,100)];m=f(a,160,500,1);check('text cards measured by actual height',eq(m,'new',288));
+a=[r('old',0,90),r('new',20,80)];m=f(a,6,146,-1);check('initial lane moves up, not into rope',eq(m,'old',90)&&eq(m,'new',52));
+a=[r('a',0,170),r('b',160,170)];m=f(a,164,302,1);check('nonintersecting x stays same y',eq(m,'b',170));
+a=[r('a',0,170),r('b',150,170)];m=f(a,164,302,1);check('edge touching not a collision',eq(m,'b',170));
+a=[r('39',0,170),r('11',100,170),r('test',200,170)];m=f(a,164,302,1);check('connected adjacent columns stable order',eq(m,'39',170)&&eq(m,'11',208)&&eq(m,'test',246));
+a=[r('a',0,170,100),r('b',0,170,100),r('independent',300,180)];m=f(a,164,302,1);check('no room retains original compact layout',eq(m,'a',170)&&eq(m,'b',170));check('overflow never moves card out of board', [...m.values()].every(y=>y>=164&&y<=302));
+a=[r('a',0,170),r('g1',0,170,30,'g'),r('g2',0,210,30,'g')];m=f(a,164,380,1);check('group moves together under prior card',eq(m,'g1',208)&&eq(m,'g2',248));check('group internal spacing preserved',m.get('g2')-m.get('g1')===40);
+a=[r('g1',0,170,30,'g'),r('g2',0,210,30,'g'),r('later',0,170)];m=f(a,164,380,1);check('later card below entire existing group',eq(m,'later',248));
+a=[r('edge',0,157),r('later',10,165)];m=f(a,164,302,1);check('manual rope margin normalised before stacking',eq(m,'edge',164)&&eq(m,'later',202));
+a=[{...r('cross',0,170),fixed:true},r('other',10,175)];m=f(a,164,302,1);check('cross-lane group component preserved',eq(m,'cross',170)&&eq(m,'other',175));
+a=[r('a',0,170),r('b',0,240)];m=f(a,164,302,1);check('already separated later card unchanged',eq(m,'b',240));
+let seed=12;const rnd=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+for(let t=0;t<120;t++) {const rows=Array.from({length:10},(_,i)=>r('r'+i,Math.floor(rnd()*800),170+Math.floor(rnd()*40),20+Math.floor(rnd()*30)));const before=JSON.stringify(rows),out=f(rows,160,1500,1);let ok=true;for(let i=0;i<rows.length;i++){const x=rows[i],y=out.get(x.id);if(y<160||y+x.height>1500)ok=false;for(let j=0;j<i;j++){const z=rows[j],yz=out.get(z.id);if(x.left<z.right&&z.left<x.right&&y<yz+z.height&&y+x.height>yz)ok=false;}}check('random fit '+t,ok&&before===JSON.stringify(rows));}
+summary();process.exit(process.exitCode||0);
