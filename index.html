@@ -381,6 +381,9 @@ body.has-sel .toast{bottom:84px}
 #s-str-field.unset .slider,#s-str-field.unset .strlabels{opacity:.4}
 .s-fallback{overflow-anchor:none}
 #s-count.full{color:#a12c23;font-weight:700}
+/* 수업이 닫힌 뒤의 학생 화면: 안내와 내가 보낸 근거만 남긴다 */
+#student-view.closed #s-panel,#student-view.closed #s-friends-panel,#student-view.closed #s-wf{display:none}
+#s-closed{border-color:#e0b100;background:#fffbe8}
 .wf-inrow{display:flex;gap:8px;align-items:center}.wf-inrow input{flex:1;min-width:0}.wf-pre{font-weight:800;white-space:nowrap;color:#8a6d00}
 .wf-more{margin:6px 0 10px}.wf-more summary{cursor:pointer;font-weight:700}.wf-more p{margin:6px 0 0}
 .link-hint{display:block;margin-top:4px;font-size:14px;font-weight:600;color:#6b5200}
@@ -691,6 +694,11 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
   </div>
   <p class="s-q" id="s-q"></p>
   <div class="s-wf hide" id="s-wf"></div>
+  <div class="panel hide" id="s-closed">
+    <h2>선생님이 수업 화면을 닫았어요</h2>
+    <p class="note">보낸 근거와 쓰던 글은 이 기기에 남아 있어요. 선생님이 수업을 다시 열면 아래 단추를 눌러 주세요.</p>
+    <div class="row" style="justify-content:flex-end"><button id="s-rejoin" class="primary">다시 들어가기</button></div>
+  </div>
   <div class="panel" id="s-panel">
     <h2 id="s-form-title">내 근거 보내기</h2>
     <div id="s-continuation" class="row hide"><button id="s-keep">앞선 생각 그대로 보내기</button><button id="s-move">위치·근거 바꾸기</button></div>
@@ -764,9 +772,12 @@ const topicIn = code => 'tow3-' + code + '-in';
 const topicAll = code => 'tow3-' + code + '-all';
 const topicMe = (code, sid) => 'tow3-' + code + '-s-' + sid;
 const cleanSid = v => String(v || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
-async function post(messages) { // 구독 없이 보내기(Realtime HTTP 방송)
-  try { const r = await fetch(SB_URL + '/realtime/v1/api/broadcast', { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ messages }) }); return r.ok; } catch { return false; }
+async function post(messages, keepalive) { // 구독 없이 보내기(Realtime HTTP 방송). keepalive: 화면이 닫히는 중에도 요청이 끝까지 나가게 한다
+  try { const r = await fetch(SB_URL + '/realtime/v1/api/broadcast', { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ messages }), ...(keepalive ? { keepalive: true } : {}) }); return r.ok; } catch { return false; }
 }
+// 수업 닫힘 알림: 교사가 수업을 닫을 때 학생 화면에 알려, 학생이 실시간 연결(서버의 동시 접속 자리)을 놓게 한다.
+// 보관 사본(오프라인)에는 학생이 없으므로 보내지 않는다. 예전 화면의 학생은 이 알림을 모르므로 그대로 남는다.
+function announceClosed(room) { if (!room || room.offline) return; post([{ topic: topicAll(room.code), event: 'closed', payload: { roomId: room.storageId, configSeq: room.configSeq } }], true); }
 // 교사 화면이 보내는 것(도착 확인 등)은 0.2초씩 모아 한 번에 보낸다
 const outQ = []; let outTimer = null;
 function sendTo(topic, event, payload) { outQ.push({ topic, event, payload }); if (!outTimer) outTimer = setTimeout(flushOut, 200); }
@@ -777,10 +788,20 @@ function closeChannel(ch) {
   if (!ch) return Promise.resolve();
   let removal = null;
   try { removal = client().removeChannel(ch); } catch {}
-  return Promise.race([
+  const done = Promise.race([
     Promise.resolve(removal).catch(() => {}),
     new Promise(resolve => setTimeout(resolve, 11000)),
   ]);
+  releaseSocket(done);
+  return done;
+}
+// 열어 둔 채널이 하나도 없으면 실시간 연결(웹소켓) 자체를 닫는다. 채널만 닫아서는 연결이 남아 서버의 동시 접속 자리를 계속 차지한다
+// (supabase-js 2.117에서 실제 연결로 확인). 다음에 채널을 구독하면 저절로 다시 연결된다.
+// 채널 정리가 끝난 뒤 조금 기다렸다가 확인한다: 닫자마자 다시 구독하는 경우(복귀 복구·다시 들어가기)에는 연결을 끊지 않는다.
+function releaseSocket(after) {
+  Promise.resolve(after).catch(() => {}).then(() => setTimeout(() => {
+    try { if (sb && sb.getChannels().length === 0 && sb.realtime.isConnected()) sb.realtime.disconnect(); } catch {}
+  }, 1500));
 }
 // 내 구독이 정말 메시지를 받는지 확인: HTTP로 ping을 보내 내 채널로 되받는다.
 // 잠들었다 깬 폰은 연결이 죽었는데도 '연결됨'으로 남을 수 있어, 채널 상태 값만으로는 알 수 없다.
@@ -865,7 +886,7 @@ function saveGame() { if(T.room) { T.room.configSeq++; LS.set(roomKey(T.room.sto
 function viewBoard(id) {const b=T.room.boards.find(b=>b.id===id);if(!b||b.deletedAt!==undefined)return;T.viewedBoardId=id;T.g=b;T.sel.clear();renderBoard();}
 function activeBoard() {return T.room?.boards.find(b=>b.id===T.room.activeBoardId);}
 function routeBoard(room,p) {return room.boards.find(b=>b.id===(p.boardId || room.legacyBoardId));}
-function openRoom(r) { dropTeacherChannel();if(T.room!==r)T.codeAt=0;T.room=r;T.g=r.boards.find(b=>b.id===r.activeBoardId)||r.boards[0];T.viewedBoardId=T.g.id;T.sel.clear();history.replaceState(null,'','?room='+r.storageId);openBoard(); }
+function openRoom(r) { if(T.ch&&T.room&&T.room.storageId!==r.storageId)announceClosed(T.room); /* 연결 중이던 다른 수업을 두고 옮겨 갈 때도 그 수업의 학생에게 알린다 */ dropTeacherChannel();if(T.room!==r)T.codeAt=0;T.room=r;T.g=r.boards.find(b=>b.id===r.activeBoardId)||r.boards[0];T.viewedBoardId=T.g.id;T.sel.clear();history.replaceState(null,'','?room='+r.storageId);openBoard(); }
 function keptBoards(room) { return room.boards.filter(b => b.deletedAt === undefined); }
 function trashReason(room, id) {
  const b=room.boards.find(b=>b.id===id);
@@ -1219,6 +1240,7 @@ function confirmLeaveTeacher() {
 function leaveTeacher() {
   if (!T.room) return showHome();
   saveGame();
+  announceClosed(T.room);
   dropTeacherChannel();
   T.probeCode = null; T.sel.clear();
   clearTimeout(cfgTimer); clearTimeout(boardTimer); boardTimer = null;
@@ -2459,7 +2481,7 @@ const meKey = (code, name) => 'tow:me:' + code + ':' + name;
 const nameKey = code => 'tow:name:' + code;
 function lastName(code) { let n = null; try { n = sessionStorage.getItem(nameKey(code)); } catch {} return n || LS.get(nameKey(code)) || LS.get('tow:me:' + code)?.name || ''; }
 function loadMe(code, name) { const old = LS.get('tow:me:' + code); return LS.get(meKey(code, name)) || (old && old.name === name ? old : null); }
-function leaveChannels() { for (const ch of S.chs || []) client().removeChannel(ch); S.chs = []; S.connected = false; S.subToken = null; }
+function leaveChannels() { for (const ch of S.chs || []) closeChannel(ch); S.chs = []; S.connected = false; S.subToken = null; } // closeChannel이 마지막 채널까지 닫히면 연결도 놓는다
 function toTeacher(event, payload) { return post([{ topic: topicIn(S.code), event, payload }]); }
 function saveMe() { LS.set(meKey(S.code, S.me.name), S.me); LS.set(nameKey(S.code), S.me.name); try { sessionStorage.setItem(nameKey(S.code), S.me.name); } catch {} }
 const stOf = c => c.stage || 0;
@@ -2476,8 +2498,16 @@ $('#j-go').onclick = () => {
   joinGame(code, name);
 };
 $('#j-name').onkeydown = e => { if (e.key === 'Enter') $('#j-go').click(); };
+// 선생님이 수업 화면을 닫았다: 쓰던 글을 보관하고 실시간 연결을 놓는다(서버의 접속 자리를 비운다).
+// 기록은 이 기기에 남는다. 선생님이 다시 열어도 저절로 이어지지 않으므로 「다시 들어가기」를 눌러 돌아온다.
+function studentClosed() {
+  if (S.closed) return;
+  saveDraft(); leaveChannels(); S.closed = true; S.pending = {};
+  $('#s-dot').classList.remove('on');
+  renderStudent();
+}
 function joinGame(code, name) {
-  S.code = code; S.cfg=null; S.pending={}; S.target=null;
+  S.code = code; S.cfg=null; S.pending={}; S.target=null; S.closed=false;
   S.me = loadMe(code, name) || { sid: uid(), cards: [], likes: [] };
   S.me.name = name; saveMe();
   history.replaceState(null, '', '?c=' + code);
@@ -2510,7 +2540,7 @@ function joinGame(code, name) {
     const token = S.subToken = uid();
     S.subAt = Date.now();
     S.chs = [
-      openChannel(topicAll(code), { config: onCfg }),
+      openChannel(topicAll(code), { config: onCfg, closed: p => { if (S.joinId === joinId && S.cfg && p && p.roomId === S.cfg.roomId) studentClosed(); } }), // 입장 전이거나 다른 수업의 알림은 무시
       openChannel(topicMe(code, S.me.sid), {
         config: onCfg,
         refresh:p=>toast(p.message||'새로고침해 주세요.',6000),
@@ -2594,6 +2624,7 @@ function renderStudent() {
   // 단계가 바뀌면(만약에 시작·내림) 쓰던 ‘옮기기’는 취소한다
   if (S.from && !curStage()) resetForm();
   $('#s-who').textContent = `코드 ${S.code} · ${S.me.name}`;
+  $('#student-view').classList.toggle('closed', !!S.closed); $('#s-closed').classList.toggle('hide', !S.closed);
   const open=studentStageOpen();
   $('#s-q').innerHTML=questionHeadingHTML(c.question,open&&curStage()===0,!open?'응답 잠시 멈춤':'');
   $('#s-q').classList.toggle('long', (c.question || '').length > 30);
@@ -2649,7 +2680,7 @@ function renderMine() {
   section('앞선 만약에 생각', older, c => { const li = mineItem(c); li.classList.add('past'); continuation(li,c); return li; });
 }
 function keepSame(id) {
-  if(!studentStageOpen()||!curStage()||!myBoardCards().some(c=>c.id===id))return;
+  if(S.closed||!studentStageOpen()||!curStage()||!myBoardCards().some(c=>c.id===id))return;
   const child=currentCard();if(child){if(!child.ok&&submissionFor(child.id)?.state!=='rejected')sendCard(child);return;}
   const p=previousCard(acceptedBoardCards(),curStage());if(!p)return;
   const c={id:uid(),boardId:S.cfg.boardId,text:p.text,side:p.side,strength:p.strength,rev:0,ok:false,stage:curStage(),from:initialCard(myBoardCards())?.id||null};
@@ -2838,6 +2869,7 @@ function resendStalled(fromConfig){
 let studentRecovering = null;
 function recoverStudent() {
   if (!S.joinId || !S.me || !S.subscribe) return Promise.resolve('idle');
+  if (S.closed) return Promise.resolve('closed'); // 수업이 닫혀 연결을 놓은 상태: 화면으로 돌아와도 다시 잇지 않는다
   if (studentRecovering) return studentRecovering;
   const joinId = S.joinId;
   const run = (async () => {
@@ -2871,7 +2903,7 @@ $('#s-str').oninput=updatePreview;$('#s-text').oninput=updatePreview;
 $('#s-cancel-edit').onclick=resetForm;
 $('#s-edit').onclick=()=>{const c=currentCard();if(c)startEdit(c.id);};
 function submitComposer(){
-  if(!S.cfg||!S.me||!studentStageOpen())return;
+  if(!S.cfg||!S.me||S.closed||!studentStageOpen())return;
   const d=composerDraft(),text=d.text.trim().slice(0,60);if(!text||!d.side)return;
   let c=currentCard();
   if(c&&c.ok&&c.text===text&&c.side===d.side&&c.strength===d.strength&&submissionFor(c.id)?.state!=='rejected')return; // 도착한 카드와 같은 내용은 다시 보내지 않는다
@@ -2891,6 +2923,7 @@ $('#s-send').onclick=submitComposer;
 // 수업·보낸 근거·쓰던 글은 이 기기에 남고, 같은 탭이면 학생은 이름을 다시 넣지 않고 들어온다
 function reloadApp() { saveDraft(); toast('새로고침하는 중…'); fetch(location.pathname + location.search, { cache: 'reload' }).catch(() => {}).finally(() => location.reload()); }
 $('#s-reload').onclick = reloadApp;
+$('#s-rejoin').onclick = () => { const code = S.code, name = S.me.name; openJoin(code); $('#j-name').value = name; joinGame(code, name); };
 $('#s-leave').onclick = () => { saveDraft(); leaveChannels(); S.joinId = null; history.replaceState(null, '', location.pathname); openJoin(''); };
 
 /* =================== 시작 =================== */

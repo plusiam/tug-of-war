@@ -69,21 +69,25 @@ function makePage(bus, { search = '', width = 360, storage = {}, wakeLock } = {}
   const winListeners = {};
   const location = { search, pathname: '/tug/', origin: 'https://example.test' };
   const page = { bus, doc, body, get, toasts: [], storage, winListeners, location, wakeRequests: 0, wakeReleases: 0 };
+  // 웹소켓 흉내: 채널을 구독하면 연결되고, 채널을 모두 닫아도 disconnect()를 부르기 전에는 연결이 남는다(실제 supabase-js와 같음)
+  const sock = page.sock = { connected: false, channels: new Set(), disconnects: 0 };
   const supabase = {
     createClient: () => ({
+      getChannels: () => [...sock.channels],
+      realtime: { isConnected: () => sock.connected, disconnect() { sock.connected = false; sock.disconnects++; } },
       channel(topic) {
         const handlers = {};
         const ch = {
           topic, page,
           on(_t, { event }, fn) { handlers[event] = fn; return ch; },
           subscribe(fn) {
-            bus.opened.push(topic);
+            bus.opened.push(topic); sock.channels.add(ch); sock.connected = true;
             if (bus.subscribeMode === 'ok') setTimeout(() => { if (ch._closed) return; bus.subs.add(ch); fn && fn('SUBSCRIBED'); }, bus.subscribeDelay / SPEED);
             else if (bus.subscribeMode === 'error') setTimeout(() => fn && fn('CHANNEL_ERROR'), 15 / SPEED);
             return ch;
           },
           _deliver(msg) { if (msg.topic === topic && handlers[msg.event]) handlers[msg.event]({ payload: msg.payload }); },
-          unsubscribe() { ch._closed = true; bus.subs.delete(ch); },
+          unsubscribe() { ch._closed = true; bus.subs.delete(ch); sock.channels.delete(ch); },
         };
         return ch;
       },
