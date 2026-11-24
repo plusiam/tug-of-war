@@ -381,7 +381,11 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 /* 「버튼으로 쪽·세기 조절」을 펼친 동안은 줄을 화면 위쪽에 붙여 둔다(줄을 보면서 세기를 맞추도록) */
 #s-panel.adjust:not(.sent) .s-ropebox{position:sticky;top:0;z-index:3;background:#fff;padding:6px 0 4px;box-shadow:0 8px 8px -8px rgba(0,0,0,.3)}
 .s-fallback{overflow-anchor:none}
-#s-count.full{color:#a12c23;font-weight:700}#s-send{min-width:100px}
+#s-count.full{color:#a12c23;font-weight:700}
+#b-participants .pt-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:2px 0}
+#b-participants .pt-row button{font-size:12px;padding:2px 8px;white-space:nowrap}
+/* 쪽은 바뀌었는데 근거 글이 앞선 그대로일 때: 근거 칸 바로 위에서 알린다 */
+.s-flip{margin:0 0 6px;padding:8px 10px;border-radius:8px;background:#fff4d6;border:1px solid #e0b100;color:#6b5200;font-weight:700;line-height:1.4}#s-send{min-width:100px}
 #student-view .mycards .m{flex-wrap:wrap}#student-view .mycards .acts{flex-wrap:wrap}
 @media(max-width:360px){#student-view.wrap{padding:18px 12px 36px}#student-view .panel{padding:14px}}
 /* 학생 화면 질문 카드: 질문이 화면 제목이 아니라 '지금 생각할 것'으로 먼저 보이게 한다. 색은 양쪽 끝(파랑·빨강)·만약에(노랑)와 겹치지 않는 남색만 쓴다. */
@@ -624,8 +628,8 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
         <div class="tpop" id="pop-view">
           <button id="t-mask" class="hide" title="켜 두면 큰 화면에 추가 질문 글과 만약에 생각이 보이지 않아요. 학생에게 가는 질문은 달라지지 않아요." aria-pressed="true">추가 질문 가리기: 켜짐</button>
           <button id="t-expand" class="on" title="카드가 판에 다 들어가지 않으면 판을 세로로 늘려 스크롤해서 보여요. 늘어난 판에서는 카드 끌기·묶기를 쉬어요. 끄면 예전처럼 한 화면 안에 겹쳐 쌓고, 끌기·묶기를 쓸 수 있어요." aria-pressed="true">자동 확장: 켜짐</button>
-          <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요.">찬반 수</button>
-          <button id="t-names">이름 보이기</button>
+          <button id="t-count" title="처음 생각과 만약에 생각의 쪽별 학생 수를 보여 줘요. 학생들이 다 쓴 뒤 정리할 때 켜 주세요." aria-pressed="false">찬반 수: 꺼짐</button>
+          <button id="t-names" aria-pressed="false">이름 보이기: 꺼짐</button>
           <div class="tfs">글자 크기<span><button id="t-fontdown">가-</button><button id="t-fontup">가+</button></span></div>
         </div>
       </div>
@@ -710,6 +714,7 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
     <div class="s-composer" id="s-composer">
       <p class="s-q-echo" id="s-q-echo"></p>
       <div class="field"><label for="s-text">근거 <span class="note" id="s-count" aria-live="polite">· 0/60자</span></label>
+        <p class="s-flip hide" id="s-flip" role="status">생각이 바뀌었네요. 근거도 고쳐 볼까요?</p>
         <textarea id="s-text" rows="2" maxlength="60" aria-describedby="s-compose-help s-send-status" placeholder="왜 그렇게 생각하나요? 핵심만 짧게"></textarea>
         <div class="note" id="s-compose-help">Enter는 줄바꿈이에요. 다 쓴 뒤 보내기를 눌러요.</div>
       </div>
@@ -1022,12 +1027,20 @@ const participantKey=(room,b)=>'tow:participants:'+room.storageId+':'+b.id;
 function enteredParticipants(room,b){const key=participantKey(room,b);if(!participants.has(key)){const saved=LS.get(key);participants.set(key,new Map((Array.isArray(saved)?saved:[]).filter(x=>Array.isArray(x)&&safeId(x[0])&&typeof x[1]==='string').map(([sid,name])=>[sid,name.slice(0,12)])));}return participants.get(key);}
 function participantRows(room,b){
  const entered=new Map(enteredParticipants(room,b));
- b.cards.forEach(c=>entered.set(c.sid,c.name||entered.get(c.sid)||'익명'));
+ b.cards.forEach(c=>{if(!c.hidden||entered.has(c.sid))entered.set(c.sid,c.name||entered.get(c.sid)||'익명');}); // 숨긴 카드만 남은 학생은 명단에 다시 올리지 않는다
  const paused=initialLocked(b)&&!boardInputStage(b);
  return [...entered].map(([sid,name])=>{const own=b.cards.filter(c=>c.sid===sid),first=initialCard(own),legacy=!first&&own.some(c=>stageOf(c)>0),stage=personalStage(preparedQueue(b),own),done=!!stageCard(own,stage);
  return {sid,name,target:stage,status:paused?'응답 잠시 멈춤':done?'준비된 질문 모두 제출 완료':stage?'추가 질문 '+stage+' 제출 전':'처음 답 제출 전',legacy};});
 }
-function renderParticipants(){if(!T.room||!T.g)return;let el=$('#b-participants');if(!el){el=document.createElement('div');el.id='b-participants';$('#b-stagebar').parentNode.appendChild(el);}const wasOpen=!!el.querySelector('details')?.open;const rows=participantRows(T.room,T.g),counts={};rows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);el.innerHTML='<details><summary>입장한 학생 기준 · 제출 여부 · '+rows.length+'명 · '+Object.entries(counts).map(([s,n])=>esc(s)+' '+n+'명').join(' · ')+'</summary><p class="note">입장 신호와 수락된 카드 기준입니다. 접속 중 여부나 타이핑을 감지하지 않아요. 같은 SID는 같은 학생으로 셉니다.</p>'+rows.map(r=>'<div>'+esc(r.name)+' · '+esc(r.status)+(r.legacy?' · 이전 기록: 처음 답 없음':'')+'</div>').join('')+'</details>';el.querySelector('details').open=wasOpen;}
+function renderParticipants(){if(!T.room||!T.g)return;let el=$('#b-participants');if(!el){el=document.createElement('div');el.id='b-participants';$('#b-stagebar').parentNode.appendChild(el);}const wasOpen=!!el.querySelector('details')?.open;const rows=participantRows(T.room,T.g),counts={};rows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);el.innerHTML='<details><summary>입장한 학생 기준 · 제출 여부 · '+rows.length+'명'+(rows.length?' · '+Object.entries(counts).map(([s,n])=>esc(s)+' '+n+'명').join(' · '):'')+'</summary><p class="note">입장 신호와 수락된 카드 기준입니다. 접속 중 여부나 타이핑을 감지하지 않아요. 같은 SID는 같은 학생으로 셉니다.</p>'+rows.map(r=>'<div class="pt-row"><span>'+esc(r.name)+' · '+esc(r.status)+(r.legacy?' · 이전 기록: 처음 답 없음':'')+'</span><button type="button" data-kick="'+esc(r.sid)+'" title="이름을 잘못 넣고 다시 들어온 학생처럼, 세지 않을 입장 기록을 명단에서 빼요. 그 학생의 카드는 숨겨요.">명단에서 빼기</button></div>').join('')+'</details>';el.querySelector('details').open=wasOpen;el.querySelectorAll('[data-kick]').forEach(b=>b.onclick=()=>confirmKick(b.dataset.kick));}
+// 명단에서 빼기: 이 질문판의 입장 기록에서 지우고 그 학생의 카드를 숨긴다(지우지 않으므로 ⋯ → 숨긴 카드 다시 보이기로 되돌릴 수 있다).
+// 그 학생이 아직 접속 중이라 다시 인사하거나 새 근거를 보내면 명단에 다시 올라온다.
+function kickParticipant(room,b,sid){const entered=enteredParticipants(room,b);entered.delete(sid);LS.set(participantKey(room,b),[...entered]);let n=0;b.cards.forEach(c=>{if(c.sid===sid&&!c.hidden){c.hidden=true;n++;}});return n;}
+function confirmKick(sid){
+ const b=T.g,row=participantRows(T.room,b).find(r=>r.sid===sid);if(!row)return;
+ const n=b.cards.filter(c=>c.sid===sid&&!c.hidden).length;
+ modal('<h2>명단에서 빼기</h2><p><b>'+esc(row.name)+'</b> · 카드 '+n+'장</p><p>이 질문판의 명단에서 빼고'+(n?' 이 학생의 카드 '+n+'장을 숨길까요? 카드는 지우지 않아요. 「⋯ → 숨긴 카드 다시 보이기」로 되돌릴 수 있어요.':' 인원에서 세지 않을까요?')+'</p><p class="note">이름을 잘못 넣고 다시 들어온 경우처럼 한 사람이 두 번 세어질 때 써요. 이 학생이 아직 접속 중이라 다시 보내면 명단에 다시 올라와요.</p><div class="actions"><button data-cancel>취소</button><button data-ok class="primary">명단에서 빼기</button></div>',(ov,close)=>{ov.querySelector('[data-cancel]').onclick=close;ov.querySelector('[data-ok]').onclick=()=>{const hid=kickParticipant(T.room,b,sid);T.sel.clear();saveGame();renderBoard();if(b.id===T.room.activeBoardId)pushConfig();close();toast('명단에서 뺐어요'+(hid?' · 카드 '+hid+'장 숨김':''));};});
+}
 function onHello(p){
  const sid=cleanSid(p.sid);if(sid&&!p.probe){const b=activeBoard(),entered=enteredParticipants(T.room,b);entered.set(sid,String(p.name||'익명').slice(0,12));LS.set(participantKey(T.room,b),[...entered]);renderParticipants();}
  if(sid)sendTo(topicMe(T.room.code,sid),'config',{...cfgPayload(),...(!p.probe?{personalCards:activeBoard().cards.filter(c=>c.sid===sid).map(c=>({id:c.id,boardId:c.boardId,text:c.text,side:c.side,strength:c.strength,rev:c.rev,stage:stageOf(c),from:c.from||null,lateInitial:!!c.lateInitial}))}:{})});if(sid&&!p.boardId&&p.protocol!==4&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,sid),'refresh',{message:'새 질문판이 시작됐어요. 이 페이지를 새로고침해 주세요.'}); // 최신 화면(protocol 4)은 첫 입장 때 boardId 없이 인사하므로 알리지 않는다
@@ -1217,7 +1230,8 @@ function showHome() {
   $('#resume-box').classList.toggle('hide', !last);
   if (!last) return;
   $('#resume-code').textContent = last.code;
-  $('#resume-q').textContent = keptBoards(last)[0].question;
+  { const kept = keptBoards(last), act = kept.find(b => b.id === last.activeBoardId) || kept[0];
+    $('#resume-q').textContent = act.question + (kept.length > 1 ? ' · ' + (kept.indexOf(act) + 1) + '번째 질문(모두 ' + kept.length + '개)' : ''); }
 }
 function acceptCard(room,p,now=Date.now()) {
  const b=routeBoard(room,p);if(!b||!safeId(p.id)||!safeId(p.sid)||!['L','R'].includes(p.side)||!Number.isInteger(p.strength)||p.strength<1||p.strength>5||typeof p.text!=='string'||!p.text.trim()||p.text.length>60||!Number.isSafeInteger(p.rev)||p.rev<0)return null;
@@ -1279,7 +1293,7 @@ function changeSummary(stage) {
 function renderCounts() {
   const g = T.g, bar = $('#b-countbar');
   $('#t-count').classList.toggle('on', !!g.showCount);
-  $('#t-count').textContent = g.showCount ? '찬반 수 숨기기' : '찬반 수';
+  $('#t-count').textContent = g.showCount ? '찬반 수: 켜짐' : '찬반 수: 꺼짐'; $('#t-count').setAttribute('aria-pressed', String(!!g.showCount));
   bar.classList.toggle('show', !!g.showCount); if (!g.showCount) return;
   const s0 = stageStats(0), cs = extraMasked() ? null : changeSummary();
   let h = `<span><span class="cl">처음 생각</span> <span class="cL">◀ ${esc(g.left)} ${s0.L}명</span> · <span class="cR">${esc(g.right)} ${s0.R}명 ▶</span></span>`;
@@ -1553,7 +1567,7 @@ function renderBoard() {
   $('#b-q').innerHTML=questionHeadingHTML(g.question,responding&&!wf&&!paused,viewNote,'교사가 준비한 질문');
   $('#b-code b').textContent = T.room.offline ? '오프라인' : g.code;
   $('#b-l').textContent = '◀ ' + g.left; $('#b-r').textContent = g.right + ' ▶';
-  $('#t-names').classList.toggle('on', g.showNames); $('#t-names').textContent = g.showNames ? '이름 숨기기' : '이름 보이기';
+  $('#t-names').classList.toggle('on', g.showNames); $('#t-names').textContent = g.showNames ? '이름 보이기: 켜짐' : '이름 보이기: 꺼짐'; $('#t-names').setAttribute('aria-pressed', String(!!g.showNames));
   $('#t-share').classList.toggle('on', g.share);
   $('#t-share').textContent = g.share ? '친구 근거: 켜짐' : '친구 근거: 꺼짐';
   $('#t-share').setAttribute('aria-pressed', String(!!g.share));
@@ -2283,8 +2297,8 @@ function moreMenu() {
       <button data-a="whatif">그런데 만약에? (같은 질문에 조건 더하기)</button>
       ${phoneOnly('sum', '종합 보기 · 인쇄')}
       <button data-a="new">새 질문판 만들기 (기록 유지)</button>
-      ${phoneOnly('names', T.g.showNames ? '이름 숨기기' : '이름 보이기')}
-      ${phoneOnly('count', T.g.showCount ? '찬반 수 숨기기' : '찬반 수')}
+      ${phoneOnly('names', T.g.showNames ? '이름 보이기: 켜짐' : '이름 보이기: 꺼짐')}
+      ${phoneOnly('count', T.g.showCount ? '찬반 수: 켜짐' : '찬반 수: 꺼짐')}
       ${phoneOnly('export', '내보내기')}
       ${phoneOnly('json', '수업 저장(JSON)')}
       ${phoneOnly('import', '저장한 수업 불러오기')}
@@ -2423,7 +2437,7 @@ function validateBackup(raw) {
  if(!bids.has(r.activeBoardId)||!bids.has(r.legacyBoardId)||!keptBoards(r).length||r.boards.find(b=>b.id===r.activeBoardId).deletedAt!==undefined)fail('활성 질문판 참조');return JSON.parse(JSON.stringify(r));
 }
 function backupObject(room){return {app:APP_MARKER,schemaVersion:ROOM_VERSION,exportedAt:new Date().toISOString(),room:JSON.parse(JSON.stringify(room))};}
-function exportRoom(){modal('<h2>수업 저장(JSON)</h2><p>교사 개인 보관용입니다. 이름 표시가 꺼져 있어도 모든 학생 이름·숨긴 카드·휴지통을 포함한 모든 질문판과 수정 기록이 포함됩니다. 학생이나 공개 게시판에 공유하지 마세요.</p><div class="actions"><button data-close>취소</button><button data-save class="primary">비공개 백업 저장</button></div>',(ov,close)=>{ov.querySelector('[data-close]').onclick=close;ov.querySelector('[data-save]').onclick=()=>{download(fileBase()+'_교사비공개.json',new Blob([JSON.stringify(backupObject(T.room),null,2)],{type:'application/json'}));close();};});}
+function exportRoom(){modal('<h2>수업 저장(JSON)</h2><p>교사 개인 보관용입니다. 이름 표시가 꺼져 있어도 모든 학생 이름·숨긴 카드·휴지통을 포함한 모든 질문판과 수정 기록이 포함됩니다. 학생이나 공개 게시판에 공유하지 마세요.</p><div class="actions"><button data-close>취소</button><button data-save class="primary">비공개 백업 저장</button></div>',(ov,close)=>{ov.querySelector('[data-close]').onclick=close;ov.querySelector('[data-save]').onclick=()=>{const name=fileBase()+'_교사비공개.json';download(name,new Blob([JSON.stringify(backupObject(T.room),null,2)],{type:'application/json'}));close();toast('저장 파일을 내보냈어요 · '+name+' · 브라우저의 다운로드 목록에서 확인해 주세요.',6000);};});}
 function importRoom(){modal('<h2>저장한 수업 불러오기</h2><p class="note">JSON만, 최대 10MB. 원본을 덮어쓰지 않고 별도 보관 사본으로 열어요. 재개 전에는 오프라인 열람입니다.</p><label for="room-file">교사 수업 백업 파일 선택</label><input id="room-file" type="file" accept=".json,application/json"><p role="status" data-status></p><div class="actions"><button data-close>닫기</button><button data-import disabled>별도 사본으로 열기</button></div>',(ov,close)=>{let candidate=null;const status=ov.querySelector('[data-status]'),go=ov.querySelector('[data-import]');ov.querySelector('[data-close]').onclick=close;ov.querySelector('#room-file').onchange=async e=>{candidate=null;go.disabled=true;try{const file=e.target.files[0];if(!file)return;if(file.size>10*1024*1024)throw Error('10MB보다 큰 파일입니다.');const raw=JSON.parse(await file.text());candidate=validateBackup(raw);status.textContent='질문: '+candidate.boards.slice(0,3).map((b,i)=>(i+1)+'. '+(b.deletedAt!==undefined?'[휴지통] ':'')+b.question).join(' / ')+(candidate.boards.length>3?' 외 '+(candidate.boards.length-3)+'개':'')+' · '+candidate.boards.length+'개 질문판 · '+candidate.boards.reduce((n,b)=>n+b.cards.length,0)+'장 · 저장 '+new Date(raw.exportedAt).toLocaleString('ko-KR')+' · 이름과 숨긴 기록을 포함한 교사 비공개 백업입니다.';go.disabled=false;}catch(err){status.textContent=err.message;}};go.onclick=()=>{if(!candidate)return;candidate.storageId=uid();candidate.offline=true;delete candidate.legacySource;LS.set(roomKey(candidate.storageId),candidate);openRoom(candidate);close();};});}
 
 /* =================== 학생 =================== */
@@ -2547,6 +2561,7 @@ function renderComposerStatus(){
   else if(currentCard()&&!state.disabled&&state.label!=='재전송')state.label='이번 생각 수정 보내기';
   // 이미 도착한 카드와 쪽·세기·근거가 모두 같으면 다시 보낼 것이 없다(같은 내용이 또 가지 않게)
   { const cur=currentCard(), d=composerDraft(); if(cur&&cur.ok&&!state.disabled&&meta?.state!=='rejected'&&d.text.trim().slice(0,60)===cur.text&&d.side===cur.side&&d.strength===cur.strength){state.disabled=true;state.message='보낸 내용과 같아요. 쪽·세기·근거 중 하나를 바꾸면 다시 보낼 수 있어요.';} }
+  if(!state.disabled&&flipBase()&&S.flipAsked){state.label='근거 그대로 보내기';state.message='쪽이 바뀌었는데 근거는 앞선 글 그대로예요. 근거를 고치거나, 그대로 보내려면 한 번 더 눌러요.';}
   b.disabled=state.disabled;b.textContent=state.label;status.dataset.state=state.state;status.textContent=(S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value+'. ':'')+state.message;
   $('#s-selection').textContent=S.side?(sideLabel(S.side)||'')+' 쪽 · 세기 '+$('#s-str').value:'아직 쪽을 고르지 않았어요.';
   // 근거는 썼는데 쪽을 고르지 않아 보내기가 꺼져 있을 때: 안내 두 곳을 눈에 띄게 한다(꺼진 단추는 눌러도 반응이 없으므로)
@@ -2563,7 +2578,7 @@ function effectiveStage(cfg,cards,personal){
 function curStage() { return effectiveStage(S.cfg,S.me?.cards); }
 function acceptedBoardCards(){return myBoardCards().filter(c=>!c.rejected&&(c.ok||c.accepted)).map(c=>c.ok?c:{...c,...c.accepted});}
 function syncPersonal(cards,boardId,cfg=S.cfg){for(const a of cards){if(!safeId(a.id)||a.boardId!==boardId||!Number.isSafeInteger(a.rev)||!Number.isInteger(a.stage)||typeof a.text!=='string')continue;let c=S.me.cards.find(c=>c.id===a.id&&c.boardId===boardId);if(c&&c.rev>a.rev){const frozen=configQueue(cfg).some(q=>q.stage>a.stage)&&(!c.accepted||c.accepted.rev<=a.rev);if(!frozen)continue;S.me.submissions ||= {};const key=submissionKey(boardId,a.id),m=S.me.submissions[key]||{id:a.id,boardId};m.rejectedDraft={text:c.text,side:c.side,strength:c.strength,stage:stOf(c),from:c.from,rev:c.rev};m.code='closed';m.message='앞선 답은 이미 도착했어요. 수락되지 않은 수정 초안은 보관했어요.';S.me.submissions[key]=m;}if(!c){c={};S.me.cards.push(c);}Object.assign(c,a,{ok:true,rejected:false,accepted:{text:a.text,side:a.side,strength:a.strength,rev:a.rev,from:a.from}});delete S.pending[submissionKey(boardId,a.id)];const m=submissionFor(a.id,boardId);if(m)m.state='arrived';}saveMe();}
-function formTitle() { const done=currentCard()?(sentView()?'에 보낸 내 생각':'의 내 생각 수정'):'에 답하기'; return !studentStageOpen()?'응답 잠시 멈춤':curStage()?'추가 질문 '+curStage()+done:'처음 질문'+done; }
+function formTitle() { const done=currentCard()?(sentView()?'에 보낸 내 생각':'의 내 생각 수정'):'에 답하기'; return !studentStageOpen()?(sentView()?'응답 잠시 멈춤 · 내가 보낸 생각':'응답 잠시 멈춤'):curStage()?'추가 질문 '+curStage()+done:'처음 질문'+done; }
 function renderStudent() {
   const c = S.cfg; if (!c) return;
   // 단계가 바뀌면(만약에 시작·내림) 쓰던 ‘옮기기’는 취소한다
@@ -2583,7 +2598,7 @@ function renderStudent() {
   const previous=target?previousCard(acceptedBoardCards(),target):null;
   $('#s-continuation').classList.toggle('hide',!open||!previous||!!currentCard());
   $('#s-keep').onclick=()=>{if(previous)keepSame(previous.id);};$('#s-move').onclick=()=>{if(previous)startFrom(previous.id);};
-  $('#s-completed').classList.toggle('hide',!currentCard()?.ok);
+  $('#s-completed').classList.toggle('hide',!currentCard()?.ok||!open);
   renderMine(); renderFriends(); updatePreview();
 }
 function sideLabel(s) { return s === 'L' ? S.cfg?.left : S.cfg?.right; }
@@ -2687,8 +2702,20 @@ const mX = (side, s) => side === 'L' ? 50 - (s - 0.5) * 9.2 : 50 + (s - 0.5) * 9
   const end = () => { drag = false; r.classList.remove('drag'); };
   r.addEventListener('pointerup', end); r.addEventListener('pointercancel', end);
 })();
+// 쪽이 바뀌었는데 근거 글은 앞선 그대로인가: 글을 가져온 카드(수정 중인 내 카드, 추가 질문에서는 앞선 생각)와 견준다. 세기만 바뀐 것은 해당하지 않는다
+function flipBase() {
+  if (!S.me || !S.cfg || !S.side || !studentStageOpen()) return null;
+  const cur = currentCard(), base = S.editing && cur ? (cur.ok ? cur : cur.accepted || cur) : !cur && curStage() ? previousCard(acceptedBoardCards(), curStage()) : null;
+  const t = $('#s-text').value.trim();
+  return base && t && t === base.text && S.side !== base.side ? base : null;
+}
 // 보낸 뒤의 정리된 화면: 이번 질문의 카드가 도착했고 작성 칸에 새로 고르거나 쓴 것이 없을 때. 그 카드를 돌려준다(아니면 null)
-function sentView() { const c = S.me && S.cfg ? currentCard() : null; return c && c.ok && studentStageOpen() && !S.editing && !S.from && !S.side && !$('#s-text').value.trim() ? c : null; }
+// 응답 잠시 멈춤 중에는 가장 나중 단계의 도착한 카드를 보여 준다(멈춘 동안은 고칠 수 없으므로 수정 단추는 숨긴다)
+function sentView() {
+  if (!S.me || !S.cfg) return null;
+  const c = studentStageOpen() ? currentCard() : myBoardCards().filter(x => x.ok && !x.rejected).sort((a, b) => stOf(a) - stOf(b)).at(-1) || null;
+  return c && c.ok && !S.editing && !S.from && !S.side && !$('#s-text').value.trim() ? c : null;
+}
 function updatePreview() {
   const v = +$('#s-str').value, sent = sentView(); $('#s-strv').textContent = S.side ? v : '(쪽을 먼저 골라요)';
   $('#s-str-field').classList.toggle('unset', !S.side);
@@ -2698,7 +2725,8 @@ function updatePreview() {
   tok.className = 'tok ' + (sent ? sent.side + ' sent' : S.side || 'unset');
   tok.textContent = sent ? '✓ ' + sent.text : $('#s-text').value.trim() || '내 근거';
   $('#s-panel').classList.toggle('sent', !!sent); $('#s-sent').classList.toggle('hide', !sent);
-  if (sent) $('#s-sent-text').textContent = '✓ 보냈어요 · ' + (sideLabel(sent.side) || '') + ' 쪽 · 세기 ' + sent.strength;
+  { const flip = !!flipBase(); $('#s-flip').classList.toggle('hide', !flip); if (!flip) S.flipAsked = null; }
+  if (sent) { const open = studentStageOpen(); $('#s-sent-text').textContent = '✓ 보냈어요 · ' + (sideLabel(sent.side) || '') + ' 쪽 · 세기 ' + sent.strength + (open ? '' : ' · 선생님이 다시 열면 고칠 수 있어요'); $('#s-edit').classList.toggle('hide', !open); }
   // Every whatif compares to the initial card, including direct composition.
   const orig = S.me && (curStage()?initialCard(myBoardCards()):myBoardCards().find(x => x.id === S.editing));
   $('#s-ghost').classList.toggle('hide', !orig); $('#s-ghost-note').classList.toggle('hide', !orig);
@@ -2837,6 +2865,8 @@ function submitComposer(){
   const d=composerDraft(),text=d.text.trim().slice(0,60);if(!text||!d.side)return;
   let c=currentCard();
   if(c&&c.ok&&c.text===text&&c.side===d.side&&c.strength===d.strength&&submissionFor(c.id)?.state!=='rejected')return; // 도착한 카드와 같은 내용은 다시 보내지 않는다
+  // 쪽만 바꾸고 근거는 앞선 그대로면 한 번 멈춰 묻는다. 같은 상태에서 한 번 더 누르면 그대로 보낸다
+  if(flipBase()){const k=S.cfg.boardId+':'+curStage()+':'+d.side+':'+text;if(S.flipAsked!==k){S.flipAsked=k;renderComposerStatus();$('#s-text').focus();return;}}
   if(curStage()){d.from=c?.from||initialCard(myBoardCards())?.id||null;S.from=d.from;}
   const signature=draftSignature(d),old=c&&submissionFor(c.id,c.boardId);
   if(c&&old&&(old.signature===signature||sameSubmission(d,old))&&S.pending[submissionKey(c.boardId,c.id)])return;

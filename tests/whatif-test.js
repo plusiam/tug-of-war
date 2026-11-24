@@ -99,6 +99,9 @@ const vm = require('vm');
   check('지운 뒤 학생에게 가는 설정: stage 2·질문 글 그대로', A.ctx.cfgPayload().stage === 2 && A.ctx.cfgPayload().whatif === '둘째 질문' && St.S.cfg.stage === 2 && St.S.cfg.whatif === '둘째 질문');
   check('교사 판은 여전히 2회차 카드를 보여 준다', A.ctx.lastStage() === 2 && A.T.g.cards.filter(c => A.ctx.onBoard(c)).length === 2);
   St.ctx.startEdit(k2.id); write('처음 근거', 'R', 5); St.ctx.submitComposer();
+  // 쪽만 바꾸고 근거는 그대로면 첫 번째 누름은 묻기만 하고, 한 번 더 누르면 그대로 보낸다
+  check('쪽만 바꾸고 근거가 그대로면 한 번 멈춰 묻는다', St.S.me.cards[1].rev === 0 && St.$('#s-send').textContent === '근거 그대로 보내기' && !St.$('#s-flip').classList.contains('hide'));
+  St.ctx.submitComposer();
   await until(() => St.S.me.cards[1].ok && St.S.me.cards[1].rev === 1, 5000, '다시 놓은 카드 도착');
   const t2 = A.T.g.cards.find(c => c.id === k2.id);
   check('지운 뒤 학생이 다시 놓아도 거부되지 않는다(쪽·세기 반영, stage 2 유지)', t2.side === 'R' && t2.strength === 5 && t2.stage === 2 && A.T.g.cards.length === 2);
