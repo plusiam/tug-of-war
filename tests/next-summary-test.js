@@ -1,4 +1,4 @@
-// 「다음 질문」(새 판을 열고 바로 시작)과 「종합 보기」(질문판 모아 보기) 시험.
+// 「새 질문 시작」(새 판을 열고 바로 시작)과 「종합 보기」(질문판 모아 보기) 시험.
 // 가짜 화면과 가짜 실시간 통신 위에서 실제 index.html 스크립트를 돌린다(phone-test-harness.js).
 const { rejections, makeBus, makePage, sleep, until, check, summary } = require('./phone-test-harness');
 const lastOverlay = page => page.overlays().at(-1);
@@ -13,7 +13,7 @@ const lastOverlay = page => page.overlays().at(-1);
   console.log('N1. 도구 줄: 판이 하나일 때');
   check('순서 표시는 판이 둘 이상일 때만', !A.$('#b-q').innerHTML.includes('번째 질문판'));
   check('「그런데 만약에?」는 추가 질문 기록이 없으면 도구 줄에서 내린다', A.$('#t-whatif').classList.contains('hide'));
-  check('「다음 질문」은 보인다', !A.$('#t-next').classList.contains('hide'));
+  check('「새 질문 시작」은 보인다', !A.$('#t-next').classList.contains('hide'));
   A.ctx.moreMenu();
   check('⋯ 메뉴에 「그런데 만약에?」가 있다', lastOverlay(A).innerHTML.includes('data-a="whatif"'));
   lastOverlay(A).remove();
@@ -26,10 +26,12 @@ const lastOverlay = page => page.overlays().at(-1);
   await until(() => St.S.me.cards[0]?.ok, 5000, '첫 카드 도착');
   check('첫 판에 카드 1장', first.cards.length === 1);
 
-  console.log('N2. 다음 질문: 입력 창');
+  console.log('N2. 새 질문 시작: 입력 창');
+  { const src = require('fs').readFileSync('index.html', 'utf8');
+    check('단추 이름은 「새 질문 시작」(예전 「다음 질문」)', /id="t-next"[^>]*>새 질문 시작<\/button>/.test(src) && src.includes('data-a="next">새 질문 시작 (새 판 열고 학생 화면 넘기기)</button>') && !src.includes('>다음 질문</button>') && !src.includes('>다음 질문 (')); }
   write(St, '쓰다 만 글', 'R', 2); // 보내지 않은 초안
   A.ctx.nextQuestion();
-  check('설정 화면이 「2번째 질문판 열기」로 뜬다', A.shown() === 'setup-view' && A.$('#setup-title').textContent === '2번째 질문판 열기' && A.$('#setup-go').textContent === '다음 질문 시작');
+  check('설정 화면이 「2번째 질문판 열기」로 뜬다', A.shown() === 'setup-view' && A.$('#setup-title').textContent === '2번째 질문판 열기' && A.$('#setup-go').textContent === '새 질문 시작');
   check('질문은 비우고 양쪽 끝 이름은 앞 질문 것을 넣어 둔다', A.$('#in-q').value === '' && A.$('#in-l').value === '용서해야 해' && A.$('#in-r').value === '용서하지 않아도 돼');
   check('취소 단추가 보인다', !A.$('#setup-cancel').classList.contains('hide'));
   A.$('#in-q').value = '   ';
@@ -38,7 +40,7 @@ const lastOverlay = page => page.overlays().at(-1);
   A.$('#setup-cancel').onclick();
   check('취소하면 판으로 돌아오고 판은 그대로', A.shown() === 'board-view' && A.T.room.boards.length === 1);
 
-  console.log('N3. 다음 질문: 만들면서 바로 시작');
+  console.log('N3. 새 질문 시작: 만들면서 바로 시작');
   first.fs = 1.2;
   A.ctx.nextQuestion(); A.$('#in-q').value = '사자는 가젤에게 사과해야 할까?'; A.$('#in-l').value = '사과해야 해'; A.$('#in-r').value = '사과하지 않아도 돼';
   const sentBefore = bus.sent.length;
@@ -95,11 +97,11 @@ const lastOverlay = page => page.overlays().at(-1);
   second.whatif.push('사자가 일부러 그랬다면?'); A.ctx.saveGame(); A.ctx.pushConfig(); A.ctx.renderBoard();
   check('추가 질문 기록이 있으면 「그런데 만약에?」가 도구 줄에 남는다', !A.$('#t-whatif').classList.contains('hide') && !A.$('#t-next').classList.contains('hide'));
   A.width = 375; A.ctx.renderBoard();
-  check('휴대폰에서는 그때 「다음 질문」을 ⋯ 안으로 보낸다', A.$('#t-next').classList.contains('hide') && !A.$('#t-whatif').classList.contains('hide'));
+  check('휴대폰에서는 그때 「새 질문 시작」을 ⋯ 안으로 보낸다', A.$('#t-next').classList.contains('hide') && !A.$('#t-whatif').classList.contains('hide'));
   A.ctx.moreMenu(); let html = lastOverlay(A).innerHTML; lastOverlay(A).remove();
-  check('휴대폰 ⋯ 메뉴: 다음 질문 · 그런데 만약에? · 종합 보기', ['next', 'whatif', 'sum'].every(a => html.includes('data-a="' + a + '"')));
+  check('휴대폰 ⋯ 메뉴: 새 질문 시작 · 그런데 만약에? · 종합 보기', ['next', 'whatif', 'sum'].every(a => html.includes('data-a="' + a + '"')));
   A.ctx.viewBoard(first.id);
-  check('기록이 없는 판의 휴대폰 도구 줄에는 「다음 질문」', !A.$('#t-next').classList.contains('hide') && A.$('#t-whatif').classList.contains('hide'));
+  check('기록이 없는 판의 휴대폰 도구 줄에는 「새 질문 시작」', !A.$('#t-next').classList.contains('hide') && A.$('#t-whatif').classList.contains('hide'));
   A.width = 1024; A.ctx.viewBoard(second.id);
 
   console.log('N8. 종합 보기');
@@ -134,11 +136,11 @@ const lastOverlay = page => page.overlays().at(-1);
   A.T.room.boards = A.T.room.boards.filter(b => b !== third); first.cards = first.cards.filter(c => !['hiddencard01', 'rightcard001'].includes(c.id));
   let ok = true, msg = '';
   try { require('vm').runInContext('validateBackup(JSON.parse(JSON.stringify(backupObject(T.room))))', A.ctx); /* 앱과 같은 실행 환경에서 왕복해야 객체 원형 검사가 맞는다 */ } catch (e) { ok = false; msg = e.message; }
-  check('다음 질문으로 만든 수업이 JSON 저장 → 검증을 통과한다', ok, msg);
+  check('새 질문 시작으로 만든 수업이 JSON 저장 → 검증을 통과한다', ok, msg);
   A.T.room.offline = true; A.ctx.renderBoard();
   const n = A.T.room.boards.length; A.toasts.length = 0;
   A.ctx.nextQuestion();
-  check('오프라인 보관 사본에서는 다음 질문을 막는다', A.shown() === 'board-view' && A.T.room.boards.length === n && A.toasts[0] === '먼저 수업 재개를 눌러 새 코드를 발급해 주세요.' && A.$('#t-next').classList.contains('hide'));
+  check('오프라인 보관 사본에서는 새 질문 시작을 막는다', A.shown() === 'board-view' && A.T.room.boards.length === n && A.toasts[0] === '먼저 수업 재개를 눌러 새 코드를 발급해 주세요.' && A.$('#t-next').classList.contains('hide'));
   html = A.ctx.summaryHTML(A.T.room);
   check('오프라인 사본의 종합 보기는 추가 질문까지 싣는다', html.includes('사자가 일부러 그랬다면?'));
   A.T.room.offline = false;

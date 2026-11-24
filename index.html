@@ -62,6 +62,9 @@ h2{font-size:20px;margin:0 0 12px}
 .tpop .tfs span{display:flex;gap:6px}
 /* 보는 질문판이 이미 진행 중이면 누를 일이 없으므로 단추 모양을 벗기고 글자로만 둔다(다른 판을 볼 때만 「이 질문 시작」 단추) */
 #board-view:not(.phone) #t-activate.now{border-color:transparent;background:none;padding-left:4px;padding-right:4px;cursor:default;pointer-events:none}
+/* 열람 중: 돌아가기 단추와 「이 질문 시작」(학생 화면이 바뀜)을 떨어뜨려 잘못 누르지 않게 한다 */
+#board-view:not(.phone) #t-current:not(.hide)+#t-activate{margin-left:18px}
+@media (max-width:1200px){.tc-long{display:none}} /* 좁은 화면에서는 「↩ 돌아가기」만 보여 도구 줄이 두 줄이 되지 않게 한다 */
 #board-view.phone .tgrp,#board-view.phone .tgap,#board-view.phone #g-save{display:none}
 .whatif-bar{display:none;padding:8px 16px;background:#fff8db;border-bottom:1px solid #f0dc8c;font-weight:700;font-size:calc(18px * var(--fs,1))}
 .whatif-bar.show{display:block}
@@ -279,6 +282,11 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 .bl-ends{flex:1 1 100%;font-size:14px;font-weight:600;overflow-wrap:anywhere;margin-top:-4px}
 .bl-ends span{display:inline-block} /* 이름이 길면 왼쪽과 오른쪽 사이에서 먼저 줄이 바뀐다 */
 .bl-l{color:var(--L)}.bl-r{color:var(--R)}
+/* ↑↓로 방금 옮긴 줄을 1초 동안 노랗게 */
+.bl-row{border-radius:10px}
+.bl-moved{animation:blMoved 1s ease-out}
+@keyframes blMoved{from{background:#ffe58a;box-shadow:0 0 0 6px #ffe58a}to{background:transparent;box-shadow:0 0 0 6px transparent}}
+@media (prefers-reduced-motion:reduce){.bl-moved{animation:none;outline:2px solid #d9a400;outline-offset:4px}}
 @media (max-width:640px){.bl-row>.note{flex:1 1 100%}}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;z-index:300;font-size:15px}
 body.has-sel .toast{bottom:84px}
@@ -433,7 +441,7 @@ body.has-sel .toast{bottom:84px}
 #board-view.phone .tools{flex:1 1 100%;min-width:0;flex-wrap:nowrap;align-items:stretch}
 #board-view.phone .tools button{flex:1 1 0;min-width:0;min-height:44px;font-size:14px;line-height:1.25;padding:4px;word-break:keep-all}
 #board-view.phone #t-more{flex:0 0 44px;font-size:18px;padding:0}
-#board-view.phone #t-boards,#board-view.phone #t-sum,
+#board-view.phone #t-boards,#board-view.phone #t-current,#board-view.phone #t-sum,
 #board-view.phone #t-names,#board-view.phone #t-count,
 #board-view.phone #t-fontdown,#board-view.phone #t-fontup{display:none}
 #board-view.phone .whatif-bar{padding:8px 10px;font-size:16px;line-height:1.4;overflow-wrap:anywhere}
@@ -631,7 +639,7 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
     <span class="codechip" id="b-code" title="크게 보기">접속 코드 <b></b></span>
     <span class="status"><span class="dot" id="b-dot"></span><span id="b-count">0</span>장</span>
     <div class="tools">
-      <button id="t-boards">질문판 목록</button><button id="t-activate">이 질문 시작</button><button id="t-next" title="새 줄다리기 판을 열고 학생 화면도 바로 그 질문으로 넘겨요. 앞 질문과 근거는 그대로 남아요.">다음 질문</button><button id="t-resume">수업 재개</button>
+      <button id="t-boards">질문판 목록</button><button id="t-current" class="hide" title="열어 보던 판을 닫고, 지금 학생에게 보이는 질문판으로 돌아가요. 학생 화면은 바뀌지 않아요." aria-label="진행 중인 질문으로 돌아가기">↩ <span class="tc-long">진행 중인 질문으로 </span>돌아가기</button><button id="t-activate">이 질문 시작</button><button id="t-next" title="새 질문판을 만들어 목록 맨 끝에 추가하고 학생 화면도 바로 그 질문으로 넘겨요. 앞 질문과 근거는 그대로 남아요.">새 질문 시작</button><button id="t-resume">수업 재개</button>
       <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요)." aria-pressed="false">친구 근거: 꺼짐</button>
       <button id="t-whatif">그런데 만약에?</button>
       <button id="t-big" title="질문이나 양쪽 근거를 화면 가득 크게 보여요. Esc 또는 「판으로」로 돌아와요.">크게 보기</button>
@@ -900,7 +908,7 @@ function keptBoards(room) { return room.boards.filter(b => b.deletedAt === undef
 function trashReason(room, id) {
  const b=room.boards.find(b=>b.id===id);
  if(!b||b.deletedAt!==undefined)return '이미 휴지통에 있는 질문판이에요.';
- if(keptBoards(room).length<=1)return '마지막 질문판은 삭제할 수 없어요.';
+ if(keptBoards(room).length<=1)return '하나 남은 질문판은 삭제할 수 없어요.';
  if(room.activeBoardId===id)return '진행 중인 질문판이에요. 다른 질문을 먼저 시작한 뒤 삭제해 주세요.';
  return '';
 }
@@ -913,16 +921,17 @@ function moveQuestion(room,id,dir) {
  const a=room.boards.indexOf(kept[i]),b=room.boards.indexOf(kept[j]);
  [room.boards[a],room.boards[b]]=[room.boards[b],room.boards[a]];return true;
 }
-function boardRows(room) {
+function boardRows(room,movedId) { // movedId: 방금 ↑↓로 옮긴 판(그 줄을 잠깐 강조)
  const live=keptBoards(room);
- return live.map((b,i)=>{const reason=trashReason(room,b.id);return '<div class="row bl-row"><button data-board="'+b.id+'">'+(i+1)+'. '+esc(b.question)+'</button><span class="bl-ends"><span class="bl-l">◀ '+esc(b.left)+'</span> · <span class="bl-r">'+esc(b.right)+' ▶</span></span><span class="note">'+(b.id===room.activeBoardId?'진행 중':'보관')+' · '+b.cards.length+'장</span><button data-move="'+b.id+'" data-dir="-1" aria-label="'+(i+1)+'번 질문판을 위로" title="위로" '+(i===0?'disabled':'')+'>↑</button><button data-move="'+b.id+'" data-dir="1" aria-label="'+(i+1)+'번 질문판을 아래로" title="아래로" '+(i===live.length-1?'disabled':'')+'>↓</button><button data-edit="'+b.id+'" aria-label="'+(i+1)+'번 질문판의 질문·양쪽 끝 이름 고치기" title="질문·양쪽 끝 이름 고치기">고치기</button><button data-trash="'+b.id+'" '+(reason?'disabled title="'+esc(reason)+'"':'')+'>삭제</button></div>';}).join('');
+ return live.map((b,i)=>{const reason=trashReason(room,b.id);return '<div class="row bl-row'+(b.id===movedId?' bl-moved':'')+'"><button data-board="'+b.id+'">'+(i+1)+'. '+esc(b.question)+'</button><span class="bl-ends"><span class="bl-l">◀ '+esc(b.left)+'</span> · <span class="bl-r">'+esc(b.right)+' ▶</span></span><span class="note">'+(b.id===room.activeBoardId?'진행 중':'보관')+' · '+b.cards.length+'장</span><button data-move="'+b.id+'" data-dir="-1" aria-label="'+(i+1)+'번 질문판을 위로" title="위로" '+(i===0?'disabled':'')+'>↑</button><button data-move="'+b.id+'" data-dir="1" aria-label="'+(i+1)+'번 질문판을 아래로" title="아래로" '+(i===live.length-1?'disabled':'')+'>↓</button><button data-edit="'+b.id+'" aria-label="'+(i+1)+'번 질문판의 질문·양쪽 끝 이름 고치기" title="질문·양쪽 끝 이름 고치기">고치기</button><button data-trash="'+b.id+'" '+(reason?'disabled title="'+esc(reason)+'"':'')+'>삭제</button></div>';}).join('');
 }
-function boardList() {
+function boardList(movedId) { // movedId는 ↑↓로 다시 그릴 때만 온다(단추의 클릭 이벤트가 넘어와도 무시)
  const trash=T.room.boards.filter(b=>b.deletedAt!==undefined);
- modal('<h2>질문판 목록</h2><p class="note">열람만으로 학생 질문은 바뀌지 않아요. 「이 질문 시작」을 눌러 제시하세요. 삭제한 판은 휴지통에서 복원할 수 있어요.</p>'+boardRows(T.room)+'<p class="note">「고치기」로 질문과 양쪽 끝 이름을 고쳐요. ↑↓로 순서를 바꾸면 「n번째 질문판」 표시와 종합 보기·인쇄 순서도 함께 바뀌어요(학생 화면은 그대로). 진행 중인 판과 마지막 질문판은 삭제할 수 없어요.</p><div class="actions"><button data-bin '+(!trash.length?'disabled':'')+'>휴지통 ('+trash.length+')</button><button data-new>새 질문판</button><button data-close>닫기</button></div>',(ov,close)=>{
+ modal('<h2>질문판 목록</h2><p class="note">질문을 누르면 그 판을 열어 볼 수 있어요. 열어 보기만 해서는 학생 화면이 바뀌지 않아요. 학생에게 내려면 판을 연 뒤 도구 줄의 「이 질문 시작」을 누르세요.</p>'+boardRows(T.room,typeof movedId==='string'?movedId:null)+'<p class="note">「고치기」는 질문과 양쪽 끝 이름을 고쳐요. ↑↓는 순서를 바꿔요(「n번째 질문판」 표시와 종합 보기·인쇄 순서도 함께, 학생 화면은 그대로). 삭제한 판은 휴지통에서 복원할 수 있어요. 진행 중인 판과 하나 남은 판은 삭제할 수 없어요.</p><div class="actions"><button data-bin '+(!trash.length?'disabled':'')+'>휴지통 ('+trash.length+')</button><button data-new>새 질문판</button><button data-close>닫기</button></div>',(ov,close)=>{
  ov.querySelectorAll('[data-board]').forEach(e=>e.onclick=()=>{viewBoard(e.dataset.board);close();});
  ov.querySelectorAll('[data-trash]').forEach(e=>e.onclick=()=>{const id=e.dataset.trash;close();confirmTrashBoard(id);});
- ov.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{if(moveQuestion(T.room,e.dataset.move,+e.dataset.dir)){saveGame();renderBoard();}close();boardList();});
+ ov.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{const id=e.dataset.move,moved=moveQuestion(T.room,id,+e.dataset.dir);if(moved){saveGame();renderBoard();}close();boardList(moved?id:null);});
+ const mv=ov.querySelector('.bl-moved');if(mv&&mv.scrollIntoView)mv.scrollIntoView({block:'nearest'}); // 다시 그려도 옮긴 줄이 보이게
  ov.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{close();editFromList(e.dataset.edit);});
  ov.querySelector('[data-bin]').onclick=()=>{close();trashList();};ov.querySelector('[data-new]').onclick=()=>{close();openSetup('new');};ov.querySelector('[data-close]').onclick=close;
  });
@@ -941,7 +950,8 @@ function trashList() {
 function savedRooms() {migrateStoredGames();const rooms=allStoredRooms();modal('<h2>보관한 수업</h2>'+rooms.map(r=>'<p><button data-room="'+r.storageId+'">'+esc(keptBoards(r)[0]?.question)+' · '+keptBoards(r).length+'판 · '+new Date(r.created).toLocaleDateString('ko-KR')+'</button></p>').join('')+'<button data-close>닫기</button>',(ov,close)=>{ov.querySelectorAll('[data-room]').forEach(e=>e.onclick=()=>{close();const r=rooms.find(r=>r.storageId===e.dataset.room);openRoom(r);});ov.querySelector('[data-close]').onclick=close;});}
 async function freshCode() {for(let i=0;i<12;i++){const code=String(1000+Math.floor(Math.random()*9000));if(LS.get(gameKey(code))||allStoredRooms().some(r=>r.code===code))continue;let taken;try{taken=await codeTaken(code);}catch{throw Error('연결을 확인하지 못했어요. 인터넷을 확인하고 다시 눌러 주세요.');}if(!taken)return code;}throw Error('빈 코드를 찾지 못했어요. 잠시 뒤 다시 시도해 주세요.');}
 async function resumeRoom() {try {const code=await freshCode();T.room.code=code;T.room.offline=false;T.room.boards.forEach(b=>b.code=code);T.probeCode=code;T.codeAt=Date.now();saveGame();openBoard();showQR();}catch(e){toast(e.message,6000);}}
-function activateViewed() {if(T.g.deletedAt!==undefined)return toast('휴지통의 질문판은 먼저 복원해 주세요.');if(T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');T.room.activeBoardId=T.viewedBoardId;saveGame();pushConfig();renderBoard();}
+function activateViewed() {if(T.g.deletedAt!==undefined)return toast('휴지통의 질문판은 먼저 복원해 주세요.');if(T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');const changed=T.room.activeBoardId!==T.viewedBoardId;T.room.activeBoardId=T.viewedBoardId;saveGame();pushConfig();renderBoard();if(changed)toast('학생 화면을 이 질문으로 바꿨어요.',3500);}
+function backToActive() {if(T.room&&T.viewedBoardId!==T.room.activeBoardId)viewBoard(T.room.activeBoardId);} // 열람을 마치고 진행 중인 판으로(학생 화면은 그대로)
 
 /* 단계(stage): 0 = 처음 생각(줄 위), k = k번째 「그런데 만약에?」 뒤 만약에 생각(줄 아래, 마지막 단계만 판에 보임) */
 const stageOf = c => c.stage ?? c.phase ?? 0;
@@ -1607,10 +1617,10 @@ function renderBoard() {
   const board = $('#board');
   const expAnc = expAnchor(board); // 늘어난 판에서 읽던 자리(다시 그린 뒤 되돌린다)
   { const xb = $('#t-expand'); xb.classList.toggle('on', EXP.on); xb.textContent = EXP.on ? '자동 확장: 켜짐' : '자동 확장: 꺼짐'; xb.setAttribute('aria-pressed', String(EXP.on)); }
-  $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#t-activate').classList.toggle('now',T.viewedBoardId===T.room.activeBoardId); $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
+  $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#t-activate').classList.toggle('now',T.viewedBoardId===T.room.activeBoardId); $('#t-current').classList.toggle('hide',T.viewedBoardId===T.room.activeBoardId); $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
   const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=upWhatif(g), paused=!wf&&initialLocked(g);
-  // 「그런데 만약에?」는 ⋯ 안으로 내렸다. 추가 질문 기록이 있는 판에서는 멈추기·고치기 입구라 도구 줄에 남긴다. 휴대폰 도구 줄은 좁아 그때 「다음 질문」을 ⋯ 안으로 보낸다
+  // 「그런데 만약에?」는 ⋯ 안으로 내렸다. 추가 질문 기록이 있는 판에서는 멈추기·고치기 입구라 도구 줄에 남긴다. 휴대폰 도구 줄은 좁아 그때 「새 질문 시작」을 ⋯ 안으로 보낸다
   const wfUsed=whatifList(g).length>0||g.cards.some(c=>stageOf(c)>0);
   $('#t-whatif').classList.toggle('hide',!wfUsed); $('#t-next').classList.toggle('hide',T.room.offline||(wfUsed&&isPhoneBoard()));
   const kept=keptBoards(T.room), ord=kept.length>1&&kept.indexOf(g)>=0?(kept.indexOf(g)+1)+'번째 질문판':'';
@@ -2092,7 +2102,7 @@ function askWhatif() {
     ${canAsk ? '' : '<p class="note wf-warn">지금 보는 질문판은 진행 중이 아니에요. 여기서 띄운 질문은 학생에게 가지 않아요. 「이 질문 시작」을 누른 뒤에 띄워 주세요.</p>'}
     <div class="wf-inrow"><span class="wf-pre" aria-hidden="true">그런데 만약에</span><input type="text" id="wf-in" maxlength="60" aria-label="그런데 만약에 뒤에 이어질 질문" placeholder="예) 사자가 다시 커진다면?"${canAsk ? '' : ' disabled'}></div>
     ${prev || gone ? `<p class="note" style="margin-top:12px">지금까지 띄운 질문 <span style="font-weight:500">${masked ? '· 글을 가려 두었어요. 보거나 고치려면 먼저 「보기 설정」에서 「추가 질문 가리기」를 꺼 주세요' : '· 글을 고치거나, 카드가 없는 질문은 지울 수 있어요'}</span></p><ul class="note wf-list">${prev}</ul>${gone ? `<p class="note">지운 빈 질문 ${gone}개는 목록에서 뺐어요. 남은 질문의 번호는 그대로예요.</p>` : ''}` : ''}
-    <div class="actions">${T.g.whatif.length ? '<button data-a="off">응답 잠시 멈추기</button>' : canAsk && latestStage(T.g) > 0 ? '<button data-a="on">응답 다시 받기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
+    <div class="actions">${T.g.whatif.length ? (canAsk ? '<button data-a="off">응답 잠시 멈추기</button>' : '') : canAsk && latestStage(T.g) > 0 ? '<button data-a="on">응답 다시 받기</button>' : ''}<button data-a="close">취소</button><button class="primary" data-a="ok"${canAsk ? '' : ' disabled'}>띄우기</button></div>`, (ov, close) => {
     const inp = ov.querySelector('#wf-in'); if (canAsk) inp.focus();
     const reopen = () => { close(); askWhatif(); };
     ov.querySelectorAll('[data-wf]').forEach(b => b.onclick = () => {
@@ -2343,11 +2353,12 @@ function moreMenu() {
   const phoneOnly = (a, label) => phone ? `<button data-a="${a}">${label}</button>` : '';
   modal(`<h2>판 관리</h2>
     <div class="actions" style="justify-content:flex-start;flex-direction:column;align-items:stretch">
+      ${phone && T.viewedBoardId !== T.room.activeBoardId ? '<button data-a="current">↩ 진행 중인 질문으로 돌아가기</button>' : ''}
       ${phoneOnly('boards', '질문판 목록')}
       <button data-a="edit">질문·양 끝 이름 고치기</button>
       ${phone ? '' : '<button data-a="auto">모든 카드 제자리로 (묶음 풀기)</button>'}
       <button data-a="unhide" ${hidden ? '' : 'disabled'}>숨긴 카드 다시 보이기 (${hidden}장)</button>
-      ${phone && !T.room.offline ? '<button data-a="next">다음 질문 (새 판 열고 바로 시작)</button>' : ''}
+      ${phone && !T.room.offline ? '<button data-a="next">새 질문 시작 (새 판 열고 학생 화면 넘기기)</button>' : ''}
       <button data-a="whatif">그런데 만약에? (같은 질문에 조건 더하기)</button>
       ${phoneOnly('sum', '종합 보기 · 인쇄')}
       <button data-a="new">새 질문판 만들기 (기록 유지)</button>
@@ -2370,7 +2381,7 @@ function moreMenu() {
     ov.querySelector('[data-a=reload]').onclick=()=>{close();reloadApp();};
     ov.querySelector('[data-a=home]').onclick = () => { close(); confirmLeaveTeacher(); };
     const phoneActions = {
-      next: nextQuestion, whatif: askWhatif, sum: openSummary,
+      current: backToActive, next: nextQuestion, whatif: askWhatif, sum: openSummary,
       boards: boardList,
       names: () => $('#t-names').onclick(),
       count: () => $('#t-count').onclick(),
@@ -2394,7 +2405,7 @@ function endsIssue(board, l, r) {
 }
 function openSetup(editing, back) {
   show('setup-view');
-  // 'next'(다음 질문): 새 질문판을 만들면서 곧바로 진행판으로 시작한다. 'new'는 예전처럼 추가만 한다
+  // 'next'(「새 질문 시작」, 예전 이름 「다음 질문」): 새 질문판을 만들면서 곧바로 진행판으로 시작한다. 'new'는 예전처럼 추가만 한다
   const nextQ=editing==='next', newBoard=editing==='new'||nextQ, prev=nextQ?activeBoard():null; editing=editing===true;
   $('#setup-lead').textContent=newBoard?'같은 접속 코드에 질문판을 추가해요. 추가만으로 학생 화면은 바뀌지 않아요.':editing?'이 질문판의 질문과 양쪽 끝 이름을 고쳐요. 진행 중인 질문판을 고치면 학생 화면에도 반영돼요.':'질문과 양쪽 끝 이름을 정하면 학생 접속 코드가 만들어져요.';
   $('#setup-title').textContent = editing ? '질문·양 끝 이름 고치기' : '줄다리기 판 만들기';
@@ -2404,7 +2415,7 @@ function openSetup(editing, back) {
   // 질문판 목록의 「고치기」로 왔으면(back = 보던 판) 그 판과 목록으로 돌아간다
   const backToBoard = () => { if (editing && back) { if (back !== T.viewedBoardId) viewBoard(back); openBoard(); boardList(); } else openBoard(); };
   $('#setup-cancel').classList.remove('hide'); $('#setup-cancel').textContent = firstSetup ? '처음 화면으로' : '취소'; if(newBoard){$('#setup-title').textContent='새 질문판 만들기';$('#setup-go').textContent='질문판 추가 (학생 화면 유지)';}
-  if(nextQ){$('#setup-title').textContent=(keptBoards(T.room).length+1)+'번째 질문판 열기';$('#setup-lead').textContent='질문을 정하면 새 줄다리기 판이 열리고 학생 화면도 바로 이 질문으로 넘어가요. 앞 질문과 근거는 그대로 남고, 양쪽 끝 이름은 앞 질문 것을 넣어 두었으니 필요하면 고쳐 주세요.';$('#setup-go').textContent='다음 질문 시작';}
+  if(nextQ){$('#setup-title').textContent=(keptBoards(T.room).length+1)+'번째 질문판 열기';$('#setup-lead').textContent='질문을 정하면 새 판이 목록 맨 끝에 추가되고, 학생 화면도 바로 이 질문으로 넘어가요. 앞 질문과 근거는 그대로 남아요. 양쪽 끝 이름은 지금 진행 중인 질문 것을 넣어 두었으니 필요하면 고쳐 주세요.';$('#setup-go').textContent='새 질문 시작';}
   if (editing) { $('#in-q').value = T.g.question; $('#in-l').value = T.g.left; $('#in-r').value = T.g.right; }
   else { $('#in-q').value = ''; $('#in-l').value = prev ? prev.left : ''; $('#in-r').value = prev ? prev.right : ''; }
   // 카드가 놓인 판을 고칠 때만 알린다
@@ -2427,7 +2438,7 @@ function openSetup(editing, back) {
 $('#b-code').onclick = ()=>T.room.offline?toast('보관 사본입니다. 수업 재개로 새 코드를 만드세요.'):showQR();
 function nextQuestion(){if(T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');openSetup('next');}
 $('#t-next').onclick=nextQuestion;$('#t-sum').onclick=openSummary;$('#sm-back').onclick=()=>openBoard();$('#sm-print').onclick=()=>window.print();
-$('#t-boards').onclick=boardList;$('#t-activate').onclick=activateViewed;$('#t-resume').onclick=resumeRoom;$('#home-saved').onclick=savedRooms;$('#home-import').onclick=importRoom;$('#home-json').onclick=()=>{if(!T.room){const r=allStoredRooms()[0];if(!r)return toast('보관한 수업이 없어요');T.room=r;T.g=r.boards[0];}exportRoom();};
+$('#t-boards').onclick=()=>boardList();$('#t-current').onclick=backToActive;$('#t-activate').onclick=activateViewed;$('#t-resume').onclick=resumeRoom;$('#home-saved').onclick=savedRooms;$('#home-import').onclick=importRoom;$('#home-json').onclick=()=>{if(!T.room){const r=allStoredRooms()[0];if(!r)return toast('보관한 수업이 없어요');T.room=r;T.g=r.boards[0];}exportRoom();};
 $('#t-names').onclick = () => { T.g.showNames = !T.g.showNames; saveGame(); renderBoard(); };
 $('#t-share').onclick = () => {
   T.g.share = !T.g.share;
