@@ -314,6 +314,44 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 .friends button.on{background:#ffe3ec;border-color:#d6336c;color:#d6336c;font-weight:800}
 @media (max-width:520px){.ends,.bigbtns{grid-template-columns:1fr}.qrbox .bigcode{font-size:48px}}
 @media print{.topbar .tools,.selbar{display:none!important}}
+/* ---------- 종합 보기(질문판 모아 보기 · A4 인쇄) ---------- */
+#sum-view{max-width:1180px;margin:0 auto;padding:0 18px 60px}
+.sm-bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 0;background:var(--bg);border-bottom:1px solid var(--line);font-size:18px}
+.sm-bar .tgap{flex:1}
+.sm-title{margin:18px 0 0;font-size:15px;font-weight:700;color:var(--sub)}
+.sm-board{margin-top:18px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.sm-ord{font-size:15px;font-weight:800;color:var(--sub)}
+.sm-q{margin:2px 0 12px;font-size:26px;font-weight:800;line-height:1.35;overflow-wrap:anywhere}
+.sm-stage{margin-top:16px;padding-top:12px;border-top:1px dashed var(--line)}
+.sm-q+.sm-stage{margin-top:0;padding-top:0;border-top:0}
+.sm-lab{font-size:16px;font-weight:800;overflow-wrap:anywhere}
+.sm-lab small{display:block;font-size:14px;font-weight:700;color:var(--sub)}
+.sm-rope{max-width:560px;margin:8px 0 10px}
+.sm-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 20px}
+.sm-end{padding-bottom:4px;margin-bottom:4px;border-bottom:3px solid var(--L);font-weight:800;font-size:17px;color:var(--L);overflow-wrap:anywhere}
+.sm-col.R .sm-end{border-color:var(--R);color:var(--R);text-align:right}
+.sm-r{display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:18px;line-height:1.4;break-inside:avoid}
+.sm-d{flex:none;font-size:12px;letter-spacing:1px;color:#b6bcc8;white-space:nowrap}
+.sm-d i{font-style:normal;color:var(--L)}.sm-col.R .sm-d i{color:var(--R)}
+.sm-t{min-width:0;overflow-wrap:anywhere}
+.sm-none{padding:4px 0;font-size:15px;color:var(--sub)}
+@media (max-width:640px){#sum-view{padding:0 12px 40px}.sm-board{padding:12px}.sm-q{font-size:20px}.sm-r{font-size:16px}.sm-cols{grid-template-columns:1fr}.sm-col.R .sm-end{text-align:left}.sm-bar .note{flex:1 1 100%;order:3}}
+@media print{
+  @page{margin:12mm}
+  html,body{height:auto;background:#fff}
+  .sm-bar,.toast,.overlay{display:none!important}
+  #sum-view{max-width:none;padding:0}
+  .sm-title{margin-top:0}
+  .sm-board{margin-top:10pt;padding:0 0 8pt;border:0;border-bottom:1px solid #999;border-radius:0}
+  .sm-q{font-size:15pt;margin-bottom:6pt;break-after:avoid}
+  .sm-ord,.sm-lab{break-after:avoid}.sm-lab{font-size:11pt}.sm-lab small{font-size:10pt}
+  .sm-rope{max-width:120mm;break-inside:avoid}
+  .sm-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+  .sm-col.R .sm-end{text-align:right!important}
+  .sm-end{font-size:11pt}.sm-r{font-size:10.5pt;padding:2pt 0}.sm-d{font-size:8pt}
+  .sm-rope .pb-cell,.sm-rope .pb-flag,.sm-rope .pb-rope{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sm-rope .pb-cell{min-height:20pt;font-size:10pt;border:1px solid #999}
+}
 .card.repositioned{box-shadow:inset 5px 0 #7c3aed}.card .moved{color:#6d28d9;background:#f3e8ff}.text-edit{color:#6b7280;font-size:12px}#links{pointer-events:none}#t-activate{font-weight:700}
 /* 학생 작성 영역만: 입력과 전송은 문서 흐름 안에 둔다(모바일 키보드 가림 방지). */
 #student-view{min-width:0}
@@ -366,7 +404,7 @@ button.wf-danger{border-color:#d9534f;color:#b3261e;font-weight:700}
 #board-view.phone .tools{flex:1 1 100%;min-width:0;flex-wrap:nowrap;align-items:stretch}
 #board-view.phone .tools button{flex:1 1 0;min-width:0;min-height:44px;font-size:14px;line-height:1.25;padding:4px;word-break:keep-all}
 #board-view.phone #t-more{flex:0 0 44px;font-size:18px;padding:0}
-#board-view.phone #t-boards,
+#board-view.phone #t-boards,#board-view.phone #t-sum,
 #board-view.phone #t-names,#board-view.phone #t-count,
 #board-view.phone #t-fontdown,#board-view.phone #t-fontup{display:none}
 #board-view.phone .whatif-bar{padding:8px 10px;font-size:16px;line-height:1.4;overflow-wrap:anywhere}
@@ -563,10 +601,11 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
     <span class="codechip" id="b-code" title="크게 보기">접속 코드 <b></b></span>
     <span class="status"><span class="dot" id="b-dot"></span><span id="b-count">0</span>장</span>
     <div class="tools">
-      <button id="t-boards">질문판 목록</button><button id="t-activate">이 질문 시작</button><button id="t-resume">수업 재개</button>
+      <button id="t-boards">질문판 목록</button><button id="t-activate">이 질문 시작</button><button id="t-next" title="새 줄다리기 판을 열고 학생 화면도 바로 그 질문으로 넘겨요. 앞 질문과 근거는 그대로 남아요.">다음 질문</button><button id="t-resume">수업 재개</button>
       <button id="t-share" title="켜면 판과 학생 화면에 근거 글이 보이고 공감 표시를 받아요. 끄면 판에는 쪽·세기·쓴 사람만 보여요(누르면 근거가 펼쳐져요)." aria-pressed="false">친구 근거: 꺼짐</button>
       <button id="t-whatif">그런데 만약에?</button>
       <button id="t-big" title="질문이나 양쪽 근거를 화면 가득 크게 보여요. Esc 또는 「판으로」로 돌아와요.">크게 보기</button>
+      <button id="t-sum" title="지금까지 연 질문판을 순서대로 한 화면에 모아 보고 인쇄해요.">종합 보기</button>
       <span class="tgap"></span>
       <div class="tgrp" id="grp-view">
         <button id="g-view" title="큰 화면에 무엇을 보일지 정해요. 추가 질문 가리기, 찬반 수, 이름 보이기, 글자 크기가 들어 있어요." aria-haspopup="true" aria-expanded="false">보기 설정 ▾</button>
@@ -609,6 +648,12 @@ h1 .role-badge{margin:0 0 0 8px;font-size:15px}
 </section>
 
 <!-- 학생 화면 -->
+<!-- 종합 보기: 한 수업의 질문판을 순서대로 모아 보고 인쇄한다 -->
+<section id="sum-view" class="hide">
+  <div class="sm-bar"><b>종합 보기</b><span class="note">이름 없이 근거만 실어요. 숨긴 카드와 휴지통의 질문판은 빠져요.</span><span class="tgap"></span><button id="sm-print" class="primary">인쇄</button><button id="sm-back">판으로</button></div>
+  <div id="sm-body"></div>
+</section>
+
 <section id="join-view" class="wrap hide">
   <h1>생각 줄다리기<span class="role-badge">학생 화면</span></h1>
   <div class="panel">
@@ -970,7 +1015,7 @@ function participantRows(room,b){
 function renderParticipants(){if(!T.room||!T.g)return;let el=$('#b-participants');if(!el){el=document.createElement('div');el.id='b-participants';$('#b-stagebar').parentNode.appendChild(el);}const wasOpen=!!el.querySelector('details')?.open;const rows=participantRows(T.room,T.g),counts={};rows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);el.innerHTML='<details><summary>입장한 학생 기준 · 제출 여부 · '+rows.length+'명 · '+Object.entries(counts).map(([s,n])=>esc(s)+' '+n+'명').join(' · ')+'</summary><p class="note">입장 신호와 수락된 카드 기준입니다. 접속 중 여부나 타이핑을 감지하지 않아요. 같은 SID는 같은 학생으로 셉니다.</p>'+rows.map(r=>'<div>'+esc(r.name)+' · '+esc(r.status)+(r.legacy?' · 이전 기록: 처음 답 없음':'')+'</div>').join('')+'</details>';el.querySelector('details').open=wasOpen;}
 function onHello(p){
  const sid=cleanSid(p.sid);if(sid&&!p.probe){const b=activeBoard(),entered=enteredParticipants(T.room,b);entered.set(sid,String(p.name||'익명').slice(0,12));LS.set(participantKey(T.room,b),[...entered]);renderParticipants();}
- if(sid)sendTo(topicMe(T.room.code,sid),'config',{...cfgPayload(),...(!p.probe?{personalCards:activeBoard().cards.filter(c=>c.sid===sid).map(c=>({id:c.id,boardId:c.boardId,text:c.text,side:c.side,strength:c.strength,rev:c.rev,stage:stageOf(c),from:c.from||null,lateInitial:!!c.lateInitial}))}:{})});if(sid&&!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,sid),'refresh',{message:'새 질문판이 시작됐어요. 이 페이지를 새로고침해 주세요.'});
+ if(sid)sendTo(topicMe(T.room.code,sid),'config',{...cfgPayload(),...(!p.probe?{personalCards:activeBoard().cards.filter(c=>c.sid===sid).map(c=>({id:c.id,boardId:c.boardId,text:c.text,side:c.side,strength:c.strength,rev:c.rev,stage:stageOf(c),from:c.from||null,lateInitial:!!c.lateInitial}))}:{})});if(sid&&!p.boardId&&p.protocol!==4&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,sid),'refresh',{message:'새 질문판이 시작됐어요. 이 페이지를 새로고침해 주세요.'}); // 최신 화면(protocol 4)은 첫 입장 때 boardId 없이 인사하므로 알리지 않는다
  // 다른 수업이 같은 코드로 겹침 확인(probe)을 보냈다면, 받는 쪽도 같은 규칙으로 누가 코드를 바꿀지 정한다
  if(p.probe&&safeId(p.roomId)&&p.roomId!==T.room.storageId)onCodeClash({roomId:p.roomId,created:p.roomCreated});
 }
@@ -1171,7 +1216,7 @@ function acceptCard(room,p,now=Date.now()) {
  else{const parent=stage>0?initialCard(b.cards.filter(c=>c.sid===p.sid)):null;c={id:p.id,boardId:b.id,sid:p.sid,name,text,side:p.side,strength:p.strength,rev:p.rev,phase:stage,stage,from:parent?.id||null,likes:[],hidden:false,history:[{side:p.side,strength:p.strength,text,phase:stage,t:now}]};b.cards.push(c);}
  return {board:b,card:c,changed:true};
 }
-function onCard(p){if(T.room?.offline)return;const r=acceptCard(T.room,p);if(!r){if(safeId(p.id)&&safeId(p.sid)){const reason=cardRejection(T.room,p)||{code:'invalid',message:'이 응답은 받지 못했어요. 내용을 확인해 주세요.'};const b=routeBoard(T.room,p),canonical=b&&stageCard(b.cards.filter(c=>c.sid===p.sid),p.stage??0);sendTo(topicMe(T.room.code,p.sid),'cardRejected',{id:p.id,rev:p.rev,boardId:p.boardId||T.room.legacyBoardId,...reason,...(['duplicate','revision','closed'].includes(reason.code)&&canonical?{acceptedCard:{id:canonical.id,boardId:b.id,text:canonical.text,side:canonical.side,strength:canonical.strength,rev:canonical.rev,stage:stageOf(canonical),from:canonical.from||null,lateInitial:!!canonical.lateInitial}}:{})});if(reason.code==='initialRequired')onHello(p);sendTo(topicMe(T.room.code,p.sid),'refresh',{message:reason.message});}return;}if(!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,p.sid),'refresh',{message:'새 질문판이 시작됐어요. 새로고침해 주세요.'});if(r.changed){saveGame();if(r.board.id===T.viewedBoardId)renderBoard();}ackTo(p,r.card.rev,r.board.id);if(r.board.id===T.room.activeBoardId)pushBoardSoon();}
+function onCard(p){if(T.room?.offline)return;const r=acceptCard(T.room,p);if(!r){if(safeId(p.id)&&safeId(p.sid)){const reason=cardRejection(T.room,p)||{code:'invalid',message:'이 응답은 받지 못했어요. 내용을 확인해 주세요.'};const b=routeBoard(T.room,p),canonical=b&&stageCard(b.cards.filter(c=>c.sid===p.sid),p.stage??0);sendTo(topicMe(T.room.code,p.sid),'cardRejected',{id:p.id,rev:p.rev,boardId:p.boardId||T.room.legacyBoardId,...reason,...(['duplicate','revision','closed'].includes(reason.code)&&canonical?{acceptedCard:{id:canonical.id,boardId:b.id,text:canonical.text,side:canonical.side,strength:canonical.strength,rev:canonical.rev,stage:stageOf(canonical),from:canonical.from||null,lateInitial:!!canonical.lateInitial}}:{})});if(reason.code==='initialRequired'||(p.boardId&&p.boardId!==T.room.activeBoardId))onHello(p); /* 다른 질문판 앞으로 온 카드: 판 전환 알림을 놓친 학생이므로 현재 질문을 다시 보낸다 */ sendTo(topicMe(T.room.code,p.sid),'refresh',{message:reason.message});}return;}if(!p.boardId&&T.room.activeBoardId!==T.room.legacyBoardId)sendTo(topicMe(T.room.code,p.sid),'refresh',{message:'새 질문판이 시작됐어요. 새로고침해 주세요.'});if(r.changed){saveGame();if(r.board.id===T.viewedBoardId)renderBoard();if(!$('#sum-view').classList.contains('hide'))renderSummary(); /* 종합 보기를 띄운 동안 들어온 근거도 반영 */}ackTo(p,r.card.rev,r.board.id);if(r.board.id===T.room.activeBoardId)pushBoardSoon();}
 function onLike(p){if(T.room?.offline)return;const b=routeBoard(T.room,p),c=b?.cards.find(c=>c.id===p.id);if(!c||!safeId(p.sid)||typeof p.on!=='boolean')return;const i=c.likes.indexOf(p.sid);if(p.on&&i<0)c.likes.push(p.sid);else if(!p.on&&i>=0)c.likes.splice(i,1);saveGame();if(b.id===T.viewedBoardId)renderBoard();if(b.id===T.room.activeBoardId)pushBoardSoon();}
 function movement(c){let moved=false,edited=false;for(let i=1;i<c.history.length;i++){const a=c.history[i-1],b=c.history[i];if(a.side!==b.side||a.strength!==b.strength)moved=true;else if(a.text!==b.text)edited=true;}return {moved,edited,returned:moved&&c.history[0].side===c.side&&c.history[0].strength===c.strength};}
 
@@ -1485,7 +1530,11 @@ function renderBoard() {
   $('#t-resume').classList.toggle('hide', !T.room.offline); $('#t-activate').disabled=T.room.offline; $('#t-activate').textContent=T.viewedBoardId===T.room.activeBoardId?'진행 중인 질문':'이 질문 시작'; $('#t-activate').classList.toggle('now',T.viewedBoardId===T.room.activeBoardId); $('#b-dot').classList.toggle('on', !T.room.offline && T.connected);
   document.documentElement.style.setProperty('--fs', g.fs || 1);
   const responding=!T.room.offline&&T.viewedBoardId===T.room.activeBoardId, wf=upWhatif(g), paused=!wf&&initialLocked(g);
-  const viewNote=[T.room.offline?'오프라인 보관':!responding?'보관판 열람':paused?'응답 잠시 멈춤':'',g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'이전 버전 여러 카드 보관':''].filter(Boolean).join(' · ');
+  // 「그런데 만약에?」는 ⋯ 안으로 내렸다. 추가 질문 기록이 있는 판에서는 멈추기·고치기 입구라 도구 줄에 남긴다. 휴대폰 도구 줄은 좁아 그때 「다음 질문」을 ⋯ 안으로 보낸다
+  const wfUsed=whatifList(g).length>0||g.cards.some(c=>stageOf(c)>0);
+  $('#t-whatif').classList.toggle('hide',!wfUsed); $('#t-next').classList.toggle('hide',T.room.offline||(wfUsed&&isPhoneBoard()));
+  const kept=keptBoards(T.room), ord=kept.length>1&&kept.indexOf(g)>=0?(kept.indexOf(g)+1)+'번째 질문판':'';
+  const viewNote=[ord,T.room.offline?'오프라인 보관':!responding?'보관판 열람':paused?'응답 잠시 멈춤':'',g.cards.some((c,i,a)=>a.findIndex(x=>x.sid===c.sid&&stageOf(x)===stageOf(c))!==i)?'이전 버전 여러 카드 보관':''].filter(Boolean).join(' · ');
   $('#b-q').innerHTML=questionHeadingHTML(g.question,responding&&!wf&&!paused,viewNote,'교사가 준비한 질문');
   $('#b-code b').textContent = T.room.offline ? '오프라인' : g.code;
   $('#b-l').textContent = '◀ ' + g.left; $('#b-r').textContent = g.right + ' ▶';
@@ -2146,6 +2195,37 @@ function sidesMenuHTML() {
     (extraMaskable() && extraMasked() ? '<br>추가 질문을 가리는 중이라 처음 생각만 저장할 수 있어요.' : '') + '</p>' +
     '<div class="actions" style="justify-content:flex-start;margin-top:8px">' + sts.map(st => '<button data-sx="' + st + '">양쪽 근거 이미지' + (many ? ': ' + (st ? '추가 질문 ' + st : '처음 생각') : '(PNG)') + '</button>').join('') + '</div>';
 }
+/* 종합 보기: 한 수업의 질문판(휴지통 제외)을 만든 순서대로 모아 보고 인쇄한다. 화면만 그리며 저장 형식·통신은 건드리지 않는다.
+   숨긴 카드는 빼고 이름은 싣지 않는다. 진행 중인 판에서 가려 둔 추가 질문은 싣지 않는다(전자칠판에 미리 보이지 않게). */
+function sumMasked(b) { const r = T.room; return !r.offline && b.id === r.activeBoardId && latestStage(b) > 0 && !isPhoneBoard() && T.maskOff !== b.id; }
+function sumRopeHTML(b, st) {
+  const counts = Array(10).fill(0);
+  b.cards.forEach(c => { const i = ropeIndex(c); if (!c.hidden && stageOf(c) === st && counts[i] !== undefined) counts[i]++; });
+  const cell = (n, i) => { const side = i < 5 ? 'L' : 'R', k = i < 5 ? 5 - i : i - 4;
+    return (i === 5 ? '<span class="pb-flag"></span>' : '') + `<span class="pb-cell ${side}${n ? '' : ' zero'}" aria-label="${esc(side === 'L' ? b.left : b.right)} 세기 ${k}: ${n}장">${n}</span>`; };
+  const ticks = [5, 4, 3, 2, 1].map(n => `<span>${n}</span>`).join('') + '<span></span>' + [1, 2, 3, 4, 5].map(n => `<span>${n}</span>`).join('');
+  return `<div class="sm-rope"><div class="pb-cells">${counts.map(cell).join('')}</div><div class="pb-rope"></div><div class="pb-ticks">${ticks}</div></div>`;
+}
+function sumStageHTML(b, st, text, labeled) {
+  const dots = n => { const k = Math.max(0, Math.min(5, n | 0)); return '<span class="sm-d"><i>' + '●'.repeat(k) + '</i>' + '○'.repeat(5 - k) + '</span>'; };
+  const col = side => { const arr = bigSideCards(b, st, side);
+    return `<div class="sm-col ${side}"><div class="sm-end">${side === 'L' ? '◀ ' + esc(b.left) : esc(b.right) + ' ▶'}</div>` +
+      (arr.length ? arr.map(c => '<div class="sm-r">' + dots(c.strength) + '<span class="sm-t">' + esc(c.text) + '</span></div>').join('') : '<div class="sm-none">아직 근거가 없어요</div>') + '</div>'; };
+  const lab = !labeled ? '' : '<div class="sm-lab">' + (st ? '<small>추가 질문 ' + st + ' · 그런데 만약에?</small>' + esc(text) : '처음 생각') + '</div>';
+  return '<div class="sm-stage">' + lab + sumRopeHTML(b, st) + '<div class="sm-cols">' + col('L') + col('R') + '</div></div>';
+}
+function summaryHTML(room) {
+  const kept = keptBoards(room);
+  return '<p class="sm-title">생각 줄다리기 · ' + esc(new Date(room.created).toLocaleDateString('ko-KR')) + ' · 질문판 ' + kept.length + '개 · 세게 당기는 근거부터(●이 많을수록 세게)</p>' + kept.map((b, i) => {
+    const masked = sumMasked(b), qs = masked ? [] : preparedQueue(b);
+    return '<div class="sm-board"><div class="sm-ord">' + (i + 1) + '번째 질문</div><div class="sm-q">' + esc(b.question) + '</div>' +
+      sumStageHTML(b, 0, '', masked || qs.length > 0) + qs.map(q => sumStageHTML(b, q.stage, q.text, true)).join('') +
+      (masked ? '<div class="sm-none">추가 질문은 가려 두어 싣지 않았어요. 「보기 설정」에서 「추가 질문 가리기」를 끄면 함께 실려요.</div>' : '') + '</div>';
+  }).join('');
+}
+function renderSummary() { $('#sm-body').innerHTML = summaryHTML(T.room); }
+function openSummary() { if (!T.room) return; renderSummary(); show('sum-view'); window.scrollTo(0, 0); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && T.room && !$('#sum-view').classList.contains('hide') && !document.querySelector('.overlay')) openBoard(); });
 function exportMenu() {
   const names = T.g.showNames ? '지금 「이름 보이기」 상태라 이름이 함께 저장돼요.' : '이름은 「학생1, 학생2…」로 바꿔 저장해요. 이름까지 넣으려면 먼저 ' + (isPhoneBoard() ? '⋯ 메뉴' : '「보기 설정」') + '에서 「이름 보이기」를 눌러 주세요.';
   modal(`<h2>내보내기</h2><p class="note">근거 카드와 위치(쪽·세기), 처음 생각과 이어진 만약에 생각(그대로·세기 바뀜·쪽 바뀜·새 근거), 쪽별 학생 수, 공감 수, 묶음을 함께 저장해요.<br>${names}</p>
@@ -2184,6 +2264,9 @@ function moreMenu() {
       <button data-a="edit">질문·양 끝 이름 고치기</button>
       ${phone ? '' : '<button data-a="auto">모든 카드 제자리로 (묶음 풀기)</button>'}
       <button data-a="unhide" ${hidden ? '' : 'disabled'}>숨긴 카드 다시 보이기 (${hidden}장)</button>
+      ${phone && !T.room.offline ? '<button data-a="next">다음 질문 (새 판 열고 바로 시작)</button>' : ''}
+      <button data-a="whatif">그런데 만약에? (같은 질문에 조건 더하기)</button>
+      ${phoneOnly('sum', '종합 보기 · 인쇄')}
       <button data-a="new">새 질문판 만들기 (기록 유지)</button>
       ${phoneOnly('names', T.g.showNames ? '이름 숨기기' : '이름 보이기')}
       ${phoneOnly('count', T.g.showCount ? '찬반 수 숨기기' : '찬반 수')}
@@ -2202,6 +2285,7 @@ function moreMenu() {
     ov.querySelector('[data-a=saved]').onclick=()=>{close();savedRooms();};
     ov.querySelector('[data-a=home]').onclick = () => { close(); confirmLeaveTeacher(); };
     const phoneActions = {
+      next: nextQuestion, whatif: askWhatif, sum: openSummary,
       boards: boardList,
       names: () => $('#t-names').onclick(),
       count: () => $('#t-count').onclick(),
@@ -2218,18 +2302,21 @@ function moreMenu() {
 }
 function openSetup(editing) {
   show('setup-view');
-  const newBoard=editing==='new'; editing=editing===true;
+  // 'next'(다음 질문): 새 질문판을 만들면서 곧바로 진행판으로 시작한다. 'new'는 예전처럼 추가만 한다
+  const nextQ=editing==='next', newBoard=editing==='new'||nextQ, prev=nextQ?activeBoard():null; editing=editing===true;
   $('#setup-lead').textContent=newBoard?'같은 접속 코드에 질문판을 추가해요. 추가만으로 학생 화면은 바뀌지 않아요.':editing?'이 질문판의 질문과 양쪽 끝 이름을 고쳐요. 진행 중인 질문판을 고치면 학생 화면에도 반영돼요.':'질문과 양쪽 끝 이름을 정하면 학생 접속 코드가 만들어져요.';
   $('#setup-title').textContent = editing ? '질문·양 끝 이름 고치기' : '줄다리기 판 만들기';
   $('#setup-go').textContent = editing ? '고치기' : '판 만들기';
   $('#setup-cancel').classList.toggle('hide', !editing && !newBoard); if(newBoard){$('#setup-title').textContent='새 질문판 만들기';$('#setup-go').textContent='질문판 추가 (학생 화면 유지)';}
+  if(nextQ){$('#setup-title').textContent=(keptBoards(T.room).length+1)+'번째 질문판 열기';$('#setup-lead').textContent='질문을 정하면 새 줄다리기 판이 열리고 학생 화면도 바로 이 질문으로 넘어가요. 앞 질문과 근거는 그대로 남고, 양쪽 끝 이름은 앞 질문 것을 넣어 두었으니 필요하면 고쳐 주세요.';$('#setup-go').textContent='다음 질문 시작';}
   if (editing) { $('#in-q').value = T.g.question; $('#in-l').value = T.g.left; $('#in-r').value = T.g.right; }
-  else { $('#in-q').value = ''; $('#in-l').value = ''; $('#in-r').value = ''; }
+  else { $('#in-q').value = ''; $('#in-l').value = prev ? prev.left : ''; $('#in-r').value = prev ? prev.right : ''; }
   $('#setup-go').onclick = async () => {
     const q = $('#in-q').value.trim(), l = $('#in-l').value.trim(), r = $('#in-r').value.trim();
     if (!q || !l || !r) return toast('질문과 양쪽 끝 이름을 모두 적어 주세요');
     if (editing) { Object.assign(T.g, { question: q, left: l, right: r }); saveGame(); openBoard(); pushConfig(); return; }
-    if(newBoard){const b=boardNew(q,l,r,T.room.code);T.room.boards.push(b);saveGame();T.g=b;T.viewedBoardId=b.id;T.sel.clear();openBoard();return;}
+    if(nextQ&&T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');
+    if(newBoard){const b=boardNew(q,l,r,T.room.code);if(nextQ){b.fs=prev?.fs||1;T.room.activeBoardId=b.id;}T.room.boards.push(b);saveGame();T.g=b;T.viewedBoardId=b.id;T.sel.clear();openBoard();if(nextQ){pushConfig();toast(keptBoards(T.room).length+'번째 질문판을 시작했어요. 앞 질문은 「질문판 목록」에서 다시 볼 수 있어요.',4000);}return;}
     $('#setup-go').disabled = true; $('#setup-go').textContent = '코드 만드는 중…';
     // 코드를 만들지 못해 이 화면에 남더라도 버튼 글자를 원래대로 돌려 다시 누를 수 있게 한다
     try { await createGame(q, l, r); } finally { $('#setup-go').disabled = false; $('#setup-go').textContent = '판 만들기'; }
@@ -2237,6 +2324,8 @@ function openSetup(editing) {
   $('#setup-cancel').onclick = () => openBoard();
 }
 $('#b-code').onclick = ()=>T.room.offline?toast('보관 사본입니다. 수업 재개로 새 코드를 만드세요.'):showQR();
+function nextQuestion(){if(T.room.offline)return toast('먼저 수업 재개를 눌러 새 코드를 발급해 주세요.');openSetup('next');}
+$('#t-next').onclick=nextQuestion;$('#t-sum').onclick=openSummary;$('#sm-back').onclick=()=>openBoard();$('#sm-print').onclick=()=>window.print();
 $('#t-boards').onclick=boardList;$('#t-activate').onclick=activateViewed;$('#t-resume').onclick=resumeRoom;$('#home-saved').onclick=savedRooms;$('#home-import').onclick=importRoom;$('#home-json').onclick=()=>{if(!T.room){const r=allStoredRooms()[0];if(!r)return toast('보관한 수업이 없어요');T.room=r;T.g=r.boards[0];}exportRoom();};
 $('#t-names').onclick = () => { T.g.showNames = !T.g.showNames; saveGame(); renderBoard(); };
 $('#t-share').onclick = () => {
@@ -2369,7 +2458,7 @@ function joinGame(code, name) {
     S.me.roomId=p.roomId;S.me.drafts ||= {};S.me.cards.forEach(c=>{if(!c.boardId)c.boardId=p.legacyBoardId;});saveMe();
     if(Array.isArray(p.personalCards))syncPersonal(p.personalCards,p.boardId,p);
     found=true;S.cfg=p;LS.set('tow:cfg:'+code,p);
-    if($('#student-view').classList.contains('hide'))enterStudent();else {if(changed)restoreDraft();else if(stageChanged){restoreDraft();}renderStudent();}
+    if($('#student-view').classList.contains('hide'))enterStudent();else {if(changed){restoreDraft();toast('선생님이 다른 질문을 열었어요. 쓰던 글이 있으면 보관했어요.',4000);}else if(stageChanged){restoreDraft();}renderStudent();}
     if(stageChanged&&!changed&&oldStage===0&&curStage()>0)$('#s-send-status').textContent='답이 도착했어요. 이제 추가 질문 '+curStage()+'에 답해 주세요.';
     if(changed)hello();
     resendStalled(true); // 선생님 화면이 살아 있다는 신호이므로, 실패로 멈춘 카드도 되살려 보낸다(카드별 3회까지)
